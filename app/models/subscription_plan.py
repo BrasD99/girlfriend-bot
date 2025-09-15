@@ -35,7 +35,7 @@ class SubscriptionPlan(Base, TimestampMixin):
     @property
     def price_per_month(self) -> Decimal:
         """Цена за месяц для сравнения планов"""
-        return self.price / (self.duration_days / 30)
+        return self.price / (Decimal(self.duration_days) / Decimal(30))
     
     @property
     def savings_percentage(self) -> int:
@@ -48,7 +48,7 @@ class SubscriptionPlan(Base, TimestampMixin):
         monthly_equivalent = self.price_per_month
         
         if monthly_equivalent < base_monthly_price:
-            savings = ((base_monthly_price - monthly_equivalent) / base_monthly_price) * 100
+            savings = ((base_monthly_price - monthly_equivalent) / base_monthly_price) * Decimal(100)
             return int(savings)
         return 0
     

@@ -139,30 +139,34 @@ class SubscriptionPlanService:
     @staticmethod
     def format_plan_info(plan: SubscriptionPlan) -> str:
         """Форматирование информации о плане для отображения"""
-        features = plan.get_features_list()
-        features_text = "\n".join([f"• {feature}" for feature in features])
-        
-        price_per_month = plan.price_per_month
-        savings = plan.savings_percentage
-        
-        info_parts = [
-            f"💎 **{plan.name}**",
-            f"💰 Цена: {plan.price}₽",
-            f"📅 Период: {plan.duration_days} дней"
-        ]
-        
-        if plan.plan_type != PlanType.MONTHLY:
-            info_parts.append(f"📊 {price_per_month:.0f}₽/месяц")
+        try:
+            features = plan.get_features_list()
+            features_text = "\n".join([f"• {feature}" for feature in features])
             
-        if savings > 0:
-            info_parts.append(f"🎉 Экономия: {savings}%")
-        
-        if plan.is_popular:
-            info_parts.append("⭐ **ПОПУЛЯРНЫЙ ВЫБОР**")
-        
-        info_parts.append(f"\n**Возможности:**\n{features_text}")
-        
-        return "\n".join(info_parts)
+            price_per_month = plan.price_per_month
+            savings = plan.savings_percentage
+            
+            info_parts = [
+                f"💎 **{plan.name}**",
+                f"💰 Цена: {plan.price}₽",
+                f"📅 Период: {plan.duration_days} дней"
+            ]
+            
+            if plan.plan_type != PlanType.MONTHLY:
+                info_parts.append(f"📊 {float(price_per_month):.0f}₽/месяц")
+                
+            if savings > 0:
+                info_parts.append(f"🎉 Экономия: {savings}%")
+            
+            if plan.is_popular:
+                info_parts.append("⭐ **ПОПУЛЯРНЫЙ ВЫБОР**")
+            
+            info_parts.append(f"\n**Возможности:**\n{features_text}")
+            
+            return "\n".join(info_parts)
+        except Exception as e:
+            logger.error(f"Error formatting plan info for plan {plan.id}: {e}")
+            return f"💎 **{plan.name}**\n💰 Цена: {plan.price}₽\n📅 Период: {plan.duration_days} дней"
     
     @staticmethod
     def get_plan_emoji(plan: SubscriptionPlan) -> str:

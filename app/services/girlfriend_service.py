@@ -143,6 +143,28 @@ class GirlfriendService:
         return profile
     
     @staticmethod
+    async def update_profile_field(
+        session: AsyncSession,
+        profile_id: int,
+        field_name: str,
+        field_value
+    ) -> Optional[GirlfriendProfile]:
+        """Обновление одного поля профиля девушки"""
+        result = await session.execute(
+            select(GirlfriendProfile)
+            .where(GirlfriendProfile.id == profile_id)
+        )
+        profile = result.scalar_one_or_none()
+        
+        if profile and hasattr(profile, field_name):
+            setattr(profile, field_name, field_value)
+            await session.commit()
+            await session.refresh(profile)
+            logger.info(f"Updated field '{field_name}' for profile {profile_id}")
+        
+        return profile
+    
+    @staticmethod
     async def delete_profile(session: AsyncSession, profile_id: int, user_id: int) -> bool:
         """Удаление профиля девушки"""
         result = await session.execute(

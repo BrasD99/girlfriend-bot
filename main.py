@@ -12,6 +12,7 @@ from app.handlers import (
     start_router,
     subscription_router,
     profile_router,
+    profile_edit_router,
     conversation_router,
     payment_router
 )
@@ -107,6 +108,7 @@ def register_routers():
     dp.include_router(start_router)
     dp.include_router(subscription_router)
     dp.include_router(profile_router)
+    dp.include_router(profile_edit_router)
     dp.include_router(conversation_router)
     dp.include_router(payment_router)
 

@@ -150,7 +150,8 @@ def get_profile_edit_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="💬 Стиль общения", callback_data="edit_communication")
     )
     builder.row(
-        InlineKeyboardButton(text="✅ Готово", callback_data="edit_done")
+        InlineKeyboardButton(text="✅ Готово", callback_data="edit_done"),
+        InlineKeyboardButton(text="🔙 Назад", callback_data="view_profile")
     )
     
     return builder.as_markup()
@@ -277,6 +278,20 @@ def get_confirmation_keyboard(action: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text="❌ Нет",
             callback_data=f"cancel_{action}"
+        )
+    )
+    
+    return builder.as_markup()
+
+
+def get_cancel_keyboard() -> InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.row(
+        InlineKeyboardButton(
+            text="❌ Отменить",
+            callback_data="cancel_edit"
         )
     )
     

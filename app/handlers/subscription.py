@@ -12,7 +12,8 @@ from app.utils.keyboards import (
 )
 from app.utils.decorators import user_required, error_handler
 from app.utils.helpers import format_subscription_info, safe_edit_message
-from app.utils.states import Payment
+from app.utils.states import Payment as PaymentState
+from app.models import Payment
 from config.settings import settings
 from decimal import Decimal
 import logging
@@ -111,7 +112,7 @@ async def buy_subscription_callback(callback: types.CallbackQuery, state: FSMCon
             )
             
             # Сохраняем ID платежа в состоянии
-            await state.set_state(Payment.waiting_for_payment)
+            await state.set_state(PaymentState.waiting_for_payment)
             await state.update_data(payment_id=payment.id)
             
             payment_text = (
@@ -383,7 +384,7 @@ async def confirm_buy_plan_callback(callback: types.CallbackQuery, state: FSMCon
             )
             
             # Сохраняем ID плана и платежа в состоянии
-            await state.set_state(Payment.waiting_for_payment)
+            await state.set_state(PaymentState.waiting_for_payment)
             await state.update_data(payment_id=payment.id, plan_id=plan.id)
             
             payment_text = (
