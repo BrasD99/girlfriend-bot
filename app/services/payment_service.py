@@ -21,7 +21,8 @@ class PaymentService:
         session: AsyncSession,
         user: User,
         amount: Decimal,
-        description: str = "Подписка на месяц"
+        description: str = "Подписка на месяц",
+        plan_id: int = None
     ) -> Payment:
         """Создание платежа через YooKassa"""
         
@@ -39,7 +40,8 @@ class PaymentService:
             "description": description,
             "metadata": {
                 "user_id": str(user.id),
-                "telegram_id": str(user.telegram_id)
+                "telegram_id": str(user.telegram_id),
+                "plan_id": str(plan_id) if plan_id else None
             }
         }, uuid.uuid4())
         

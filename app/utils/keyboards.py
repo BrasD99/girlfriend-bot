@@ -195,12 +195,6 @@ def get_payment_keyboard(payment_url: str) -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text="✅ Проверить оплату",
-            callback_data="check_payment"
-        )
-    )
-    builder.row(
-        InlineKeyboardButton(
             text="❌ Отменить",
             callback_data="cancel_payment"
         )

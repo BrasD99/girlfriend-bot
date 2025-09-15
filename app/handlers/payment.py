@@ -42,33 +42,70 @@ async def process_yookassa_webhook(webhook_data: dict) -> bool:
                     if payment:
                         user = await session.get(User, payment.user_id)
                         if user:
-                            # Проверяем, есть ли уже активная подписка
-                            active_subscription = await SubscriptionService.get_active_subscription(
-                                session, user.id
-                            )
+                            # Получаем план из метаданных платежа или используем месячный по умолчанию
+                            metadata = payment_data.get("metadata", {})
+                            plan_id = metadata.get("plan_id")
                             
-                            if active_subscription:
-                                # Продлеваем существующую подписку
-                                await SubscriptionService.extend_subscription(
-                                    session, active_subscription, 30
+                            plan = None
+                            if plan_id:
+                                plan = await SubscriptionPlanService.get_plan_by_id(session, int(plan_id))
+                            
+                            if not plan:
+                                # Используем месячный план по умолчанию
+                                plan = await SubscriptionPlanService.get_plan_by_type(session, "monthly")
+                            
+                            if plan:
+                                # Создаем подписку
+                                subscription = await SubscriptionService.create_paid_subscription(
+                                    session, user, plan, payment_id
                                 )
+                                
+                                # Отправляем уведомление пользователю
+                                await _notify_user_subscription_activated(user, plan, subscription)
+                                
+                                logger.info(f"Subscription activated for user {user.telegram_id} with plan {plan.name}")
+                                return True
                             else:
-                                # Получаем план подписки (по умолчанию месячный)
-                                plan = await SubscriptionPlanService.get_monthly_plan(session)
-                                if plan:
-                                    # Создаем новую подписку
-                                    await SubscriptionService.create_paid_subscription(
-                                        session, user, plan, payment_id
-                                    )
-                            
-                            logger.info(f"Subscription updated for user {user.telegram_id}")
-                            return True
+                                logger.error(f"No plan found for payment {payment_id}")
             
             return success
             
     except Exception as e:
         logger.error(f"Error processing webhook: {e}")
         return False
+
+
+async def _notify_user_subscription_activated(user: User, plan, subscription):
+    """Уведомление пользователя об активации подписки"""
+    try:
+        from main import bot
+        from app.utils.keyboards import get_subscription_keyboard
+        
+        success_text = (
+            "🎉 **Оплата прошла успешно!**\n\n"
+            f"✅ Подписка '{plan.name}' активирована\n"
+            f"📅 Действует до: {subscription.end_date.strftime('%d.%m.%Y')}\n"
+            "💬 Все функции бота доступны\n\n"
+            "Спасибо за покупку! 💕\n\n"
+            "Теперь вы можете:\n"
+            "• Создать профиль девушки\n"
+            "• Начать общение\n"
+            "• Использовать все возможности бота"
+        )
+        
+        keyboard = get_subscription_keyboard(True)
+        
+        await bot.send_message(
+            chat_id=user.telegram_id,
+            text=success_text,
+            reply_markup=keyboard,
+            parse_mode="Markdown"
+        )
+        
+        logger.info(f"Notification sent to user {user.telegram_id}")
+        
+    except Exception as e:
+        logger.error(f"Error sending notification to user {user.telegram_id}: {e}")
 
 
 # Функция для настройки webhook в YooKassa (вызывается при запуске бота)

@@ -120,22 +120,52 @@ class SubscriptionService:
     @staticmethod
     async def get_subscription_info(session: AsyncSession, user_id: int) -> dict:
         """Получение информации о подписке пользователя"""
-        subscription = await SubscriptionService.get_active_subscription(session, user_id)
+        # Сначала пытаемся найти активную подписку
+        active_subscription = await SubscriptionService.get_active_subscription(session, user_id)
+        
+        if active_subscription:
+            current_time = get_current_utc_time()
+            days_left = (active_subscription.end_date - current_time).days
+            
+            return {
+                "has_subscription": True,
+                "status": active_subscription.status,
+                "end_date": active_subscription.end_date,
+                "days_left": max(0, days_left),
+                "is_trial": active_subscription.status == SubscriptionStatus.TRIAL,
+                "is_cancelled": False,
+                "is_expired": False
+            }
+        
+        # Если активной подписки нет, ищем последнюю подписку (может быть отмененная или истекшая)
+        result = await session.execute(
+            select(Subscription)
+            .where(Subscription.user_id == user_id)
+            .order_by(Subscription.end_date.desc())
+        )
+        subscription = result.scalars().first()
         
         if not subscription:
             return {
                 "has_subscription": False,
                 "status": None,
                 "end_date": None,
-                "days_left": 0
+                "days_left": 0,
+                "is_cancelled": False,
+                "is_expired": False
             }
         
-        days_left = (subscription.end_date - get_current_utc_time()).days
+        current_time = get_current_utc_time()
+        days_left = (subscription.end_date - current_time).days
+        is_expired = subscription.end_date <= current_time
+        is_cancelled = subscription.status == SubscriptionStatus.CANCELLED
         
         return {
-            "has_subscription": True,
+            "has_subscription": False,  # Если мы здесь, значит активной подписки нет
             "status": subscription.status,
             "end_date": subscription.end_date,
             "days_left": max(0, days_left),
-            "is_trial": subscription.status == SubscriptionStatus.TRIAL
+            "is_trial": subscription.status == SubscriptionStatus.TRIAL,
+            "is_cancelled": is_cancelled,
+            "is_expired": is_expired
         }

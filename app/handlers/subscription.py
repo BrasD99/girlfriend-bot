@@ -141,73 +141,6 @@ async def buy_subscription_callback(callback: types.CallbackQuery, state: FSMCon
             )
 
 
-@router.callback_query(F.data == "check_payment")
-@error_handler
-@user_required
-async def check_payment_callback(callback: types.CallbackQuery, state: FSMContext, user):
-    """Проверка статуса платежа"""
-    data = await state.get_data()
-    payment_id = data.get("payment_id")
-    
-    if not payment_id:
-        await callback.answer("❌ Платеж не найден", show_alert=True)
-        return
-    
-    async with db_service.async_session() as session:
-        # Получаем платеж из базы
-        payment = await session.get(Payment, payment_id)
-        if not payment:
-            await callback.answer("❌ Платеж не найден", show_alert=True)
-            return
-        
-        # Проверяем статус в YooKassa
-        payment = await PaymentService.check_payment_status(session, payment)
-        
-        if payment.status == "succeeded":
-            # Получаем план из состояния
-            plan_id = data.get("plan_id")
-            if plan_id:
-                plan = await SubscriptionPlanService.get_plan_by_id(session, plan_id)
-                if plan:
-                    # Создаем подписку с планом
-                    await SubscriptionService.create_paid_subscription(
-                        session, user, plan, payment.yookassa_payment_id
-                    )
-                else:
-                    await callback.answer("❌ План не найден", show_alert=True)
-                    return
-            else:
-                # Обратная совместимость - используем месячный план
-                monthly_plan = await SubscriptionPlanService.get_plan_by_type(session, "monthly")
-                if monthly_plan:
-                    await SubscriptionService.create_paid_subscription(
-                        session, user, monthly_plan, payment.yookassa_payment_id
-                    )
-            
-            await state.clear()
-            
-            success_text = (
-                "🎉 Оплата прошла успешно!\n\n"
-                "✅ Подписка активирована на 30 дней\n"
-                "💬 Все функции бота доступны\n"
-                "🔄 Автопродление включено\n\n"
-                "Спасибо за покупку! 💕"
-            )
-            
-            await callback.message.edit_text(
-                success_text,
-                reply_markup=get_subscription_keyboard(True)
-            )
-            await callback.answer("✅ Подписка активирована!")
-            
-        elif payment.status in ["cancelled", "failed"]:
-            await state.clear()
-            await callback.answer("❌ Платеж отменен или не прошел", show_alert=True)
-            
-        else:
-            await callback.answer("⏳ Платеж еще обрабатывается...")
-
-
 @router.callback_query(F.data == "cancel_payment")
 @error_handler
 async def cancel_payment_callback(callback: types.CallbackQuery, state: FSMContext):
@@ -268,16 +201,14 @@ async def confirm_cancel_subscription(callback: types.CallbackQuery, user):
         if subscription:
             await SubscriptionService.cancel_subscription(session, subscription)
             
-            success_text = (
-                "✅ Подписка отменена\n\n"
-                "🔄 Автопродление отключено\n"
-                f"📅 Доступ сохранится до {subscription.end_date.strftime('%d.%m.%Y')}\n\n"
-                "Вы можете возобновить подписку в любое время."
-            )
+            # Получаем обновленную информацию о подписке
+            subscription_info = await SubscriptionService.get_subscription_info(session, user.id)
+            text = format_subscription_info(subscription_info)
+            keyboard = get_subscription_keyboard(subscription_info["has_subscription"])
             
             await callback.message.edit_text(
-                success_text,
-                reply_markup=get_subscription_keyboard(True)
+                text,
+                reply_markup=keyboard
             )
             await callback.answer("Подписка отменена")
         else:
@@ -380,7 +311,8 @@ async def confirm_buy_plan_callback(callback: types.CallbackQuery, state: FSMCon
                 session,
                 user,
                 plan.price,
-                f"Подписка: {plan.name}"
+                f"Подписка: {plan.name}",
+                plan.id
             )
             
             # Сохраняем ID плана и платежа в состоянии
@@ -393,7 +325,8 @@ async def confirm_buy_plan_callback(callback: types.CallbackQuery, state: FSMCon
                 f"💰 Сумма: {plan.price}₽\n"
                 f"📅 Период: {plan.duration_days} дней\n"
                 f"🔄 Автопродление: Да\n\n"
-                f"Нажмите кнопку 'Оплатить' для перехода к оплате."
+                f"Нажмите кнопку 'Оплатить' для перехода к оплате.\n"
+                f"После успешной оплаты подписка будет активирована автоматически."
             )
             
             from app.utils.keyboards import get_payment_keyboard
