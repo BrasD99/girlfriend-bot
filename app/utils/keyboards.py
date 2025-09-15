@@ -21,9 +21,11 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
     return builder.as_markup(resize_keyboard=True)
 
 
-def get_subscription_keyboard(has_subscription: bool = False) -> InlineKeyboardMarkup:
+def get_subscription_keyboard(subscription_info: dict) -> InlineKeyboardMarkup:
     """Клавиатура для управления подпиской"""
     builder = InlineKeyboardBuilder()
+    
+    has_subscription = subscription_info.get("has_subscription", False)
     
     if not has_subscription:
         builder.row(
@@ -32,12 +34,7 @@ def get_subscription_keyboard(has_subscription: bool = False) -> InlineKeyboardM
                 callback_data="view_plans"
             )
         )
-        builder.row(
-            InlineKeyboardButton(
-                text="🎁 Активировать пробный период",
-                callback_data="activate_trial"
-            )
-        )
+        # Кнопка пробного периода удалена, так как он активируется автоматически при первом входе
     else:
         builder.row(
             InlineKeyboardButton(
@@ -73,12 +70,7 @@ def get_profile_keyboard(has_profile: bool = False) -> InlineKeyboardMarkup:
                 callback_data="create_profile"
             )
         )
-        builder.row(
-            InlineKeyboardButton(
-                text="🎲 Случайный профиль",
-                callback_data="random_profile"
-            )
-        )
+        # Кнопка "Случайный профиль" удалена - создание только через ИИ
     else:
         builder.row(
             InlineKeyboardButton(
@@ -120,12 +112,7 @@ def get_profile_creation_keyboard() -> InlineKeyboardMarkup:
             callback_data="create_ai"
         )
     )
-    builder.row(
-        InlineKeyboardButton(
-            text="🎲 Случайный профиль",
-            callback_data="create_random"
-        )
-    )
+    # Кнопка "Случайный профиль" удалена - создание только через ИИ
     
     return builder.as_markup()
 

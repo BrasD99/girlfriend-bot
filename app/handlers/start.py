@@ -6,7 +6,7 @@ from app.services.user_service import UserService
 from app.services.subscription_service import SubscriptionService
 from app.utils.keyboards import get_main_keyboard
 from app.utils.decorators import user_required, error_handler
-from app.utils.helpers import get_greeting_message
+from app.utils.helpers import get_greeting_message, format_datetime_for_user
 from config.settings import settings
 import logging
 
@@ -152,8 +152,8 @@ async def settings_button(message: types.Message, user):
         f"Статус: {'Активна' if subscription_info['has_subscription'] else 'Неактивна'}\n"
         f"Пробный период: {'Использован' if user.trial_used else 'Доступен'}\n\n"
         f"📊 **Статистика:**\n"
-        f"Дата регистрации: {user.created_at.strftime('%d.%m.%Y')}\n"
-        f"Последняя активность: {user.updated_at.strftime('%d.%m.%Y %H:%M')}"
+        f"Дата регистрации: {format_datetime_for_user(user.created_at, include_time=False)}\n"
+        f"Последняя активность: {format_datetime_for_user(user.updated_at, include_time=True)}"
     )
     
     await message.answer(settings_text, parse_mode="Markdown")

@@ -7,6 +7,7 @@ from app.services.user_service import UserService
 from app.services.subscription_plan_service import SubscriptionPlanService
 from app.models import User
 from app.utils.decorators import error_handler
+from app.utils.helpers import format_datetime_for_user
 import logging
 from yookassa import Configuration
 from config.settings import settings
@@ -84,7 +85,7 @@ async def _notify_user_subscription_activated(user: User, plan, subscription):
         success_text = (
             "🎉 **Оплата прошла успешно!**\n\n"
             f"✅ Подписка '{plan.name}' активирована\n"
-            f"📅 Действует до: {subscription.end_date.strftime('%d.%m.%Y')}\n"
+            f"📅 Действует до: {format_datetime_for_user(subscription.end_date, include_time=True)}\n"
             "💬 Все функции бота доступны\n\n"
             "Спасибо за покупку! 💕\n\n"
             "Теперь вы можете:\n"
@@ -93,7 +94,11 @@ async def _notify_user_subscription_activated(user: User, plan, subscription):
             "• Использовать все возможности бота"
         )
         
-        keyboard = get_subscription_keyboard(True)
+        # Получаем информацию о подписке для корректного отображения клавиатуры
+        async with db_service.async_session() as session:
+            subscription_info = await SubscriptionService.get_subscription_info(session, user.id)
+        
+        keyboard = get_subscription_keyboard(subscription_info)
         
         await bot.send_message(
             chat_id=user.telegram_id,

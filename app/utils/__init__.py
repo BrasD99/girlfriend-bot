@@ -8,5 +8,7 @@ __all__ = [
     "get_profile_keyboard",
     "subscription_required",
     "format_subscription_info",
-    "format_profile_info"
+    "format_profile_info",
+    "utc_to_moscow_time",
+    "format_datetime_for_user"
 ]

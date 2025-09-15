@@ -3,6 +3,30 @@ from app.models import Subscription, GirlfriendProfile
 from typing import Optional
 
 
+def utc_to_moscow_time(utc_datetime: datetime) -> datetime:
+    """Конвертация UTC времени в московское время (UTC+3)"""
+    if utc_datetime.tzinfo is None:
+        # Если timezone не указан, считаем что это UTC
+        utc_datetime = utc_datetime.replace(tzinfo=timezone.utc)
+    
+    # Московское время UTC+3
+    moscow_tz = timezone(timedelta(hours=3))
+    return utc_datetime.astimezone(moscow_tz)
+
+
+def format_datetime_for_user(dt: datetime, include_time: bool = True) -> str:
+    """Форматирование даты и времени для отображения пользователю в московском времени"""
+    if not isinstance(dt, datetime):
+        return str(dt)
+    
+    moscow_dt = utc_to_moscow_time(dt)
+    
+    if include_time:
+        return moscow_dt.strftime("%d.%m.%Y %H:%M (МСК)")
+    else:
+        return moscow_dt.strftime("%d.%m.%Y")
+
+
 def format_subscription_info(subscription_info: dict) -> str:
     """Форматирование информации о подписке"""
     # Если нет подписки вообще или она истекла
@@ -11,7 +35,7 @@ def format_subscription_info(subscription_info: dict) -> str:
         if subscription_info.get("is_cancelled"):
             end_date = subscription_info["end_date"]
             if isinstance(end_date, datetime):
-                end_date_str = end_date.strftime("%d.%m.%Y")
+                end_date_str = format_datetime_for_user(end_date, include_time=False)
             else:
                 end_date_str = str(end_date)
             
@@ -37,7 +61,7 @@ def format_subscription_info(subscription_info: dict) -> str:
     
     end_date = subscription_info["end_date"]
     if isinstance(end_date, datetime):
-        end_date_str = end_date.strftime("%d.%m.%Y %H:%M")
+        end_date_str = format_datetime_for_user(end_date, include_time=True)
     else:
         end_date_str = str(end_date)
     
@@ -85,12 +109,12 @@ def format_conversation_stats(stats: dict) -> str:
     last_date = stats["last_message_date"]
     
     if isinstance(first_date, datetime):
-        first_date_str = first_date.strftime("%d.%m.%Y")
+        first_date_str = format_datetime_for_user(first_date, include_time=False)
     else:
         first_date_str = "Неизвестно"
     
     if isinstance(last_date, datetime):
-        last_date_str = last_date.strftime("%d.%m.%Y %H:%M")
+        last_date_str = format_datetime_for_user(last_date, include_time=True)
     else:
         last_date_str = "Неизвестно"
     
@@ -132,8 +156,10 @@ def truncate_text(text: str, max_length: int = 100) -> str:
 
 
 def get_greeting_message() -> str:
-    """Получение приветственного сообщения в зависимости от времени"""
-    current_hour = datetime.now().hour
+    """Получение приветственного сообщения в зависимости от времени (по московскому времени)"""
+    # Получаем текущее время в Москве
+    moscow_time = utc_to_moscow_time(datetime.now(timezone.utc))
+    current_hour = moscow_time.hour
     
     if 5 <= current_hour < 12:
         return "Доброе утро! ☀️"

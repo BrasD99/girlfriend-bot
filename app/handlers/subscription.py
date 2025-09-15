@@ -32,7 +32,7 @@ async def subscription_menu(message: types.Message, user):
         subscription_info = await SubscriptionService.get_subscription_info(session, user.id)
     
     text = format_subscription_info(subscription_info)
-    keyboard = get_subscription_keyboard(subscription_info["has_subscription"])
+    keyboard = get_subscription_keyboard(subscription_info)
     
     await message.answer(text, reply_markup=keyboard)
 
@@ -56,44 +56,7 @@ async def subscription_info_callback(callback: types.CallbackQuery, user):
         await callback.answer("📊 Информация актуальна")
 
 
-@router.callback_query(F.data == "activate_trial")
-@error_handler
-@user_required
-async def activate_trial_callback(callback: types.CallbackQuery, user):
-    """Активация пробного периода"""
-    async with db_service.async_session() as session:
-        if user.trial_used:
-            await callback.answer(
-                "❌ Вы уже использовали пробный период",
-                show_alert=True
-            )
-            return
-        
-        # Проверяем, нет ли уже активной подписки
-        if await SubscriptionService.is_user_subscribed(session, user.id):
-            await callback.answer(
-                "❌ У вас уже есть активная подписка",
-                show_alert=True
-            )
-            return
-        
-        # Активируем пробный период
-        await UserService.start_trial(session, user)
-        await SubscriptionService.create_trial_subscription(session, user)
-        
-        success_text = (
-            "🎉 Пробный период активирован!\n\n"
-            f"✅ Вам доступны все функции бота на {settings.trial_days} дней\n"
-            "💬 Можете начать общение с девушкой\n"
-            "👤 Создайте профиль в соответствующем разделе\n\n"
-            "Приятного использования! 💕"
-        )
-        
-        await callback.message.edit_text(
-            success_text,
-            reply_markup=get_subscription_keyboard(True)
-        )
-        await callback.answer("🎁 Пробный период активирован!")
+# Обработчик activate_trial удален, так как пробный период активируется автоматически при первом входе
 
 
 @router.callback_query(F.data == "buy_subscription")
@@ -152,9 +115,13 @@ async def cancel_payment_callback(callback: types.CallbackQuery, state: FSMConte
         "Вы можете вернуться к оплате в любое время через меню подписки."
     )
     
+    # Получаем информацию о подписке для корректного отображения клавиатуры
+    async with db_service.async_session() as session:
+        subscription_info = await SubscriptionService.get_subscription_info(session, callback.from_user.id)
+    
     await callback.message.edit_text(
         cancel_text,
-        reply_markup=get_subscription_keyboard(False)
+        reply_markup=get_subscription_keyboard(subscription_info)
     )
     await callback.answer("Оплата отменена")
 
@@ -204,7 +171,7 @@ async def confirm_cancel_subscription(callback: types.CallbackQuery, user):
             # Получаем обновленную информацию о подписке
             subscription_info = await SubscriptionService.get_subscription_info(session, user.id)
             text = format_subscription_info(subscription_info)
-            keyboard = get_subscription_keyboard(subscription_info["has_subscription"])
+            keyboard = get_subscription_keyboard(subscription_info)
             
             await callback.message.edit_text(
                 text,
@@ -219,9 +186,13 @@ async def confirm_cancel_subscription(callback: types.CallbackQuery, user):
 @error_handler
 async def cancel_subscription_cancel(callback: types.CallbackQuery):
     """Отмена отмены подписки"""
+    # Получаем информацию о подписке для корректного отображения клавиатуры
+    async with db_service.async_session() as session:
+        subscription_info = await SubscriptionService.get_subscription_info(session, callback.from_user.id)
+    
     await callback.message.edit_text(
         "Отмена подписки отменена 😊",
-        reply_markup=get_subscription_keyboard(True)
+        reply_markup=get_subscription_keyboard(subscription_info)
     )
     await callback.answer()
 
@@ -356,7 +327,7 @@ async def back_to_subscription_callback(callback: types.CallbackQuery, user):
         subscription_info = await SubscriptionService.get_subscription_info(session, user.id)
     
     text = format_subscription_info(subscription_info)
-    keyboard = get_subscription_keyboard(subscription_info["has_subscription"])
+    keyboard = get_subscription_keyboard(subscription_info)
     
     # Безопасное редактирование сообщения
     await safe_edit_message(callback.message, text, keyboard)

@@ -145,7 +145,7 @@ class GeminiService:
             
             Отвечай в формате:
             ```json
-            {
+            {{
               "name": "Имя",
               "age": 25,
               "personality": "Описание характера...",
@@ -153,7 +153,7 @@ class GeminiService:
               "interests": "Интересы, хобби",
               "background": "Предыстория...",
               "communication_style": "Стиль общения..."
-            }
+            }}
             ```
             """
             

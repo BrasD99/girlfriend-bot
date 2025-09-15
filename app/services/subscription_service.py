@@ -27,9 +27,14 @@ class SubscriptionService:
                     Subscription.end_date > get_current_utc_time()
                 )
             )
-            .order_by(Subscription.end_date.desc())
+            # Сортируем по приоритету: сначала ACTIVE, потом TRIAL, затем по дате окончания
+            .order_by(
+                Subscription.status == SubscriptionStatus.TRIAL,  # False (ACTIVE) идет первым
+                Subscription.end_date.desc()
+            )
         )
-        return result.scalar_one_or_none()
+        # Возвращаем первую (приоритетную) подписку
+        return result.scalars().first()
     
     @staticmethod
     async def create_trial_subscription(session: AsyncSession, user: User) -> Subscription:
@@ -52,6 +57,26 @@ class SubscriptionService:
         return subscription
     
     @staticmethod
+    async def deactivate_all_user_subscriptions(session: AsyncSession, user_id: int) -> None:
+        """Деактивация всех активных подписок пользователя"""
+        result = await session.execute(
+            select(Subscription)
+            .where(
+                and_(
+                    Subscription.user_id == user_id,
+                    Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL])
+                )
+            )
+        )
+        
+        subscriptions = result.scalars().all()
+        for subscription in subscriptions:
+            subscription.status = SubscriptionStatus.CANCELLED
+            logger.info(f"Deactivated subscription {subscription.id} for user_id: {user_id}")
+        
+        await session.commit()
+    
+    @staticmethod
     async def create_paid_subscription(
         session: AsyncSession, 
         user: User, 
@@ -59,6 +84,9 @@ class SubscriptionService:
         payment_id: str
     ) -> Subscription:
         """Создание платной подписки"""
+        # Деактивируем все предыдущие подписки
+        await SubscriptionService.deactivate_all_user_subscriptions(session, user.id)
+        
         start_date = get_current_utc_time()
         end_date = start_date + timedelta(days=plan.duration_days)
         
@@ -120,6 +148,8 @@ class SubscriptionService:
     @staticmethod
     async def get_subscription_info(session: AsyncSession, user_id: int) -> dict:
         """Получение информации о подписке пользователя"""
+        # Информация о trial_used больше не нужна для клавиатуры, так как кнопка пробного периода удалена
+        
         # Сначала пытаемся найти активную подписку
         active_subscription = await SubscriptionService.get_active_subscription(session, user_id)
         
