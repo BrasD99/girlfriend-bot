@@ -3,11 +3,34 @@ from config.settings import settings
 from app.models import GirlfriendProfile
 from typing import Optional
 import logging
+import json
+import re
 
 logger = logging.getLogger(__name__)
 
 # Настройка Gemini API
 genai.configure(api_key=settings.gemini_api_key)
+
+
+def extract_json_from_markdown(text: str) -> str:
+    """Извлечение JSON из markdown блока кода"""
+    # Поиск JSON в блоке кода ```json...```
+    json_match = re.search(r'```(?:json)?\s*\n?({[^`]+})\s*\n?```', text, re.DOTALL)
+    if json_match:
+        return json_match.group(1).strip()
+    
+    # Поиск JSON в обычном блоке кода ```...```
+    code_match = re.search(r'```\s*\n?({[^`]+})\s*\n?```', text, re.DOTALL)
+    if code_match:
+        return code_match.group(1).strip()
+    
+    # Поиск JSON объекта в тексте
+    json_object_match = re.search(r'({\s*"[^}]+})', text, re.DOTALL)
+    if json_object_match:
+        return json_object_match.group(1).strip()
+    
+    # Если ничего не найдено, возвращаем исходный текст
+    return text.strip()
 
 
 class GeminiService:
@@ -112,7 +135,7 @@ class GeminiService:
             Предпочтения пользователя: {user_preferences}
             
             Создай JSON с полями:
-            - name: имя девушки
+            - name: русское женское имя
             - age: возраст (18-30)
             - personality: описание характера (2-3 предложения)
             - appearance: описание внешности (2-3 предложения)
@@ -120,7 +143,18 @@ class GeminiService:
             - background: краткая предыстория (2-3 предложения)
             - communication_style: стиль общения (1-2 предложения)
             
-            Отвечай только JSON без дополнительного текста.
+            Отвечай в формате:
+            ```json
+            {
+              "name": "Имя",
+              "age": 25,
+              "personality": "Описание характера...",
+              "appearance": "Описание внешности...",
+              "interests": "Интересы, хобби",
+              "background": "Предыстория...",
+              "communication_style": "Стиль общения..."
+            }
+            ```
             """
             
             response = await self.model.generate_content_async(
@@ -129,14 +163,36 @@ class GeminiService:
             )
             
             if response.text:
-                # Попытка парсинга JSON
-                import json
+                # Извлекаем JSON из markdown и парсим
                 try:
-                    return json.loads(response.text.strip())
-                except json.JSONDecodeError:
-                    logger.warning("Failed to parse JSON from Gemini response")
+                    json_text = extract_json_from_markdown(response.text)
+                    logger.info(f"Extracted JSON from Gemini response: {json_text[:200]}...")
+                    
+                    profile_data = json.loads(json_text)
+                    
+                    # Проверяем, что все обязательные поля присутствуют
+                    required_fields = ["name", "age", "personality", "appearance", "interests", "background", "communication_style"]
+                    for field in required_fields:
+                        if field not in profile_data:
+                            logger.warning(f"Missing required field: {field}")
+                            profile_data[field] = self._get_default_profile()[field]
+                    
+                    # Проверяем возраст
+                    if not isinstance(profile_data.get("age"), int) or not (18 <= profile_data["age"] <= 50):
+                        profile_data["age"] = 23
+                    
+                    logger.info(f"Successfully parsed profile for: {profile_data.get('name', 'Unknown')}")
+                    return profile_data
+                    
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse JSON from Gemini response: {e}")
+                    logger.warning(f"Raw response: {response.text[:500]}...")
+                    return self._get_default_profile()
+                except Exception as e:
+                    logger.error(f"Error processing Gemini response: {e}")
                     return self._get_default_profile()
             else:
+                logger.warning("Empty response from Gemini")
                 return self._get_default_profile()
                 
         except Exception as e:

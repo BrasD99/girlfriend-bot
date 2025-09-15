@@ -9,7 +9,7 @@ from app.utils.keyboards import (
     get_profile_edit_keyboard, get_confirmation_keyboard
 )
 from app.utils.decorators import user_required, subscription_required, error_handler
-from app.utils.helpers import format_profile_info, validate_age, validate_name
+from app.utils.helpers import format_profile_info, validate_age, validate_name, safe_edit_message
 from app.utils.states import ProfileCreation, ProfileEditing
 import logging
 
@@ -105,13 +105,39 @@ async def create_ai_callback(callback: types.CallbackQuery, state: FSMContext):
 @error_handler
 @user_required
 async def create_random_callback(callback: types.CallbackQuery, user):
-    """Создание случайного профиля"""
+    """Создание случайного профиля (из меню создания)"""
+    await _create_random_profile(callback, user)
+
+
+@router.callback_query(F.data == "random_profile")
+@error_handler
+@user_required
+async def random_profile_callback(callback: types.CallbackQuery, user):
+    """Создание случайного профиля (из главного меню профиля)"""
+    await _create_random_profile(callback, user)
+
+
+async def _create_random_profile(callback: types.CallbackQuery, user):
+    """Общая логика создания случайного профиля"""
     await callback.message.edit_text("🎲 Создаю случайный профиль...")
     
     try:
+        # Проверяем, нет ли уже активного профиля
+        async with db_service.async_session() as session:
+            existing_profile = await GirlfriendService.get_active_profile(session, user.id)
+            
+            if existing_profile:
+                await callback.message.edit_text(
+                    "⚠️ У вас уже есть активный профиль.\n\n"
+                    "Удалите текущий профиль или создайте новый через меню 'Создать профиль'.",
+                    reply_markup=get_profile_keyboard(True)
+                )
+                await callback.answer("⚠️ Профиль уже существует", show_alert=True)
+                return
+        
         # Генерируем случайный профиль
         profile_data = await gemini_service.generate_profile_suggestions(
-            "Создай случайный профиль привлекательной девушки"
+            "Создай случайный профиль привлекательной девушки с уникальными чертами характера и внешности"
         )
         
         async with db_service.async_session() as session:
@@ -120,17 +146,19 @@ async def create_random_callback(callback: types.CallbackQuery, user):
                 user,
                 name=profile_data.get("name", "Анна"),
                 age=profile_data.get("age", 23),
-                personality=profile_data.get("personality", ""),
-                appearance=profile_data.get("appearance", ""),
-                interests=profile_data.get("interests", ""),
-                background=profile_data.get("background", ""),
-                communication_style=profile_data.get("communication_style", "")
+                personality=profile_data.get("personality", "Добрая и отзывчивая"),
+                appearance=profile_data.get("appearance", "Привлекательная девушка"),
+                interests=profile_data.get("interests", "Музыка, книги, путешествия"),
+                background=profile_data.get("background", "Интересная и разносторонняя личность"),
+                communication_style=profile_data.get("communication_style", "Общается дружелюбно и тепло")
             )
         
         success_text = (
             f"🎉 **Профиль создан!**\n\n"
             f"{format_profile_info(profile)}\n\n"
-            f"Теперь вы можете начать общение! 💕"
+            f"🎲 **Случайный профиль готов!**\n"
+            f"Теперь вы можете начать общение! 💕\n\n"
+            f"⚙️ Если что-то не нравится, вы можете отредактировать профиль!"
         )
         
         await callback.message.edit_text(
@@ -138,10 +166,16 @@ async def create_random_callback(callback: types.CallbackQuery, user):
             reply_markup=get_profile_keyboard(True),
             parse_mode="Markdown"
         )
-        await callback.answer("✅ Профиль создан!")
+        await callback.answer("✅ Случайный профиль создан!")
         
     except Exception as e:
         logger.error(f"Error creating random profile: {e}")
+        await callback.message.edit_text(
+            "❌ **Ошибка при создании профиля**\n\n"
+            "Попробуйте еще раз или создайте профиль вручную.",
+            reply_markup=get_profile_keyboard(False),
+            parse_mode="Markdown"
+        )
         await callback.answer("❌ Ошибка при создании профиля", show_alert=True)
 
 
@@ -354,15 +388,15 @@ async def view_profile_callback(callback: types.CallbackQuery, user):
         
         if profile:
             text = f"👤 **Профиль девушки:**\n\n{format_profile_info(profile)}"
-            await callback.message.edit_text(
+            await safe_edit_message(
+                callback.message,
                 text,
                 reply_markup=get_profile_keyboard(True),
                 parse_mode="Markdown"
             )
+            await callback.answer("👤 Профиль обновлен")
         else:
             await callback.answer("❌ Профиль не найден", show_alert=True)
-    
-    await callback.answer()
 
 
 @router.callback_query(F.data == "edit_profile")
