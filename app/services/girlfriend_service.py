@@ -18,7 +18,8 @@ class GirlfriendService:
         appearance: Optional[str] = None,
         interests: Optional[str] = None,
         background: Optional[str] = None,
-        communication_style: Optional[str] = None
+        communication_style: Optional[str] = None,
+        user_description: Optional[str] = None
     ) -> GirlfriendProfile:
         """Создание профиля девушки"""
         # Деактивируем все предыдущие профили пользователя
@@ -33,6 +34,7 @@ class GirlfriendService:
             interests=interests,
             background=background,
             communication_style=communication_style,
+            user_description=user_description,
             is_active=True
         )
         

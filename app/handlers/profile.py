@@ -84,16 +84,17 @@ async def create_manual_callback(callback: types.CallbackQuery, state: FSMContex
 @error_handler
 async def create_ai_callback(callback: types.CallbackQuery, state: FSMContext):
     """Создание профиля с помощью ИИ"""
-    await state.set_state(ProfileCreation.waiting_for_preferences)
+    await state.set_state(ProfileCreation.waiting_for_user_description)
     
     text = (
         "🤖 **Создание профиля с помощью ИИ**\n\n"
-        "Опишите, какую девушку вы хотели бы видеть:\n\n"
+        "Для создания идеального профиля девушки, сначала расскажите о себе!\n\n"
+        "Опишите себя (это поможет создать совместимую девушку):\n\n"
         "Например:\n"
-        "• Добрая и веселая блондинка 25 лет\n"
-        "• Умная брюнетка, любит книги и кино\n"
-        "• Спортивная девушка с чувством юмора\n\n"
-        "Опишите ваши предпочтения:"
+        "• Мне 25 лет, работаю программистом, люблю книги и фильмы\n"
+        "• Студент, увлекаюсь спортом и музыкой\n"
+        "• Творческий человек, люблю путешествия и фотографию\n\n"
+        "📝 Расскажите о себе:"
     )
     
     await callback.message.edit_text(text, parse_mode="Markdown")
@@ -101,6 +102,35 @@ async def create_ai_callback(callback: types.CallbackQuery, state: FSMContext):
 
 
 # Обработчики для случайного профиля удалены - создание только через ИИ
+
+
+# Обработчик для описания пользователя при создании через ИИ
+@router.message(ProfileCreation.waiting_for_user_description)
+@error_handler
+async def process_user_description(message: types.Message, state: FSMContext):
+    """Обработка описания пользователя для ИИ"""
+    user_description = message.text.strip()
+    
+    if len(user_description) < 10:
+        await message.answer(
+            "❌ Пожалуйста, опишите себя подробнее (минимум 10 символов)"
+        )
+        return
+    
+    # Сохраняем описание пользователя
+    await state.update_data(user_description=user_description)
+    await state.set_state(ProfileCreation.waiting_for_preferences)
+    
+    text = (
+        f"✅ Отлично! Теперь опишите, какую девушку вы хотели бы видеть:\n\n"
+        f"Например:\n"
+        f"• Добрая и веселая блондинка 25 лет\n"
+        f"• Умная брюнетка, любит книги и кино\n"
+        f"• Спортивная девушка с чувством юмора\n\n"
+        f"💕 Опишите ваши предпочтения:"
+    )
+    
+    await message.answer(text)
 
 
 # Обработчики для ручного создания профиля
@@ -257,7 +287,6 @@ async def process_background(message: types.Message, state: FSMContext, user):
 async def process_ai_preferences(message: types.Message, state: FSMContext, user):
     """Обработка предпочтений для ИИ"""
     preferences = message.text.strip()
-    await state.clear()
     
     if len(preferences) < 10:
         await message.answer(
@@ -265,11 +294,16 @@ async def process_ai_preferences(message: types.Message, state: FSMContext, user
         )
         return
     
-    await message.answer("🤖 Создаю профиль на основе ваших предпочтений...")
+    # Получаем сохраненные данные
+    data = await state.get_data()
+    user_description = data.get("user_description", "")
+    await state.clear()
+    
+    await message.answer("🤖 Создаю персонализированный профиль на основе ваших данных...")
     
     try:
-        # Генерируем профиль с помощью ИИ
-        profile_data = await gemini_service.generate_profile_suggestions(preferences)
+        # Генерируем профиль с помощью ИИ, используя и описание пользователя, и предпочтения
+        profile_data = await gemini_service.generate_profile_suggestions(preferences, user_description)
         
         async with db_service.async_session() as session:
             profile = await GirlfriendService.create_girlfriend_profile(
@@ -281,13 +315,15 @@ async def process_ai_preferences(message: types.Message, state: FSMContext, user
                 appearance=profile_data.get("appearance", ""),
                 interests=profile_data.get("interests", ""),
                 background=profile_data.get("background", ""),
-                communication_style=profile_data.get("communication_style", "")
+                communication_style=profile_data.get("communication_style", ""),
+                user_description=user_description
             )
         
         success_text = (
-            f"🎉 **Профиль создан с помощью ИИ!**\n\n"
+            f"🎉 **Персонализированный профиль создан!**\n\n"
             f"{format_profile_info(profile)}\n\n"
-            f"Если что-то не нравится, вы можете отредактировать профиль! 💕"
+            f"💕 Профиль создан с учетом ваших интересов и предпочтений!\n"
+            f"Если что-то не нравится, вы можете отредактировать профиль!"
         )
         
         await message.answer(

@@ -14,6 +14,7 @@ class GirlfriendProfile(Base, TimestampMixin):
     interests = Column(Text, nullable=True)   # Интересы и хобби
     background = Column(Text, nullable=True)  # Предыстория
     communication_style = Column(Text, nullable=True)  # Стиль общения
+    user_description = Column(Text, nullable=True)  # Описание пользователя для персонализации
     is_active = Column(Boolean, default=True)
     
     # Relationships
@@ -47,12 +48,17 @@ class GirlfriendProfile(Base, TimestampMixin):
         if self.communication_style:
             prompt_parts.append(f"Стиль общения: {self.communication_style}")
             
+        if self.user_description:
+            prompt_parts.append(f"Информация о твоем собеседнике: {self.user_description}")
+            prompt_parts.append("Учитывай эту информацию в разговоре, находи общие темы и интересы.")
+            
         prompt_parts.extend([
             "Общайся естественно, как настоящая девушка.",
             "Отвечай на русском языке.",
             "Будь эмоциональной и живой в общении.",
             "Можешь использовать эмодзи для выражения эмоций.",
-            "Не упоминай, что ты искусственный интеллект."
+            "Не упоминай, что ты искусственный интеллект.",
+            "Проявляй интерес к собеседнику и его жизни."
         ])
         
         return " ".join(prompt_parts)

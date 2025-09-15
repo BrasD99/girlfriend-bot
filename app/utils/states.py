@@ -3,6 +3,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 class ProfileCreation(StatesGroup):
     """Состояния для создания профиля девушки"""
+    waiting_for_user_description = State()  # Ожидание описания пользователя для ИИ
     waiting_for_preferences = State()  # Ожидание предпочтений для ИИ
     waiting_for_name = State()
     waiting_for_age = State()
