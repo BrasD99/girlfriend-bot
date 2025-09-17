@@ -46,13 +46,6 @@ def get_subscription_keyboard(subscription_info: dict) -> InlineKeyboardMarkup:
             )
         )
     
-    builder.row(
-        InlineKeyboardButton(
-            text="📊 Информация о подписке",
-            callback_data="subscription_info"
-        )
-    )
-    
     return builder.as_markup()
 
 

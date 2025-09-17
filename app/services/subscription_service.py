@@ -3,7 +3,7 @@ from sqlalchemy import select, and_
 from app.models import Subscription, User, SubscriptionStatus, SubscriptionPlan
 from datetime import datetime, timedelta, timezone
 from config.settings import settings
-from typing import Optional
+from typing import Optional, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -199,3 +199,52 @@ class SubscriptionService:
             "is_cancelled": is_cancelled,
             "is_expired": is_expired
         }
+    
+    @staticmethod
+    async def get_subscriptions_expiring_soon(
+        session: AsyncSession, 
+        days_ahead: int = None
+    ) -> List[Subscription]:
+        """Получение подписок, которые истекают в ближайшие дни"""
+        if days_ahead is None:
+            days_ahead = settings.subscription_expiry_notification_days
+        
+        current_time = get_current_utc_time()
+        expiry_threshold = current_time + timedelta(days=days_ahead)
+        
+        result = await session.execute(
+            select(Subscription)
+            .where(
+                and_(
+                    Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL]),
+                    Subscription.end_date <= expiry_threshold,
+                    Subscription.end_date > current_time
+                )
+            )
+            .order_by(Subscription.end_date)
+        )
+        
+        return result.scalars().all()
+    
+    @staticmethod
+    async def get_recently_expired_subscriptions(
+        session: AsyncSession,
+        hours_back: int = 24
+    ) -> List[Subscription]:
+        """Получение недавно истекших подписок"""
+        current_time = get_current_utc_time()
+        expired_threshold = current_time - timedelta(hours=hours_back)
+        
+        result = await session.execute(
+            select(Subscription)
+            .where(
+                and_(
+                    Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL]),
+                    Subscription.end_date <= current_time,
+                    Subscription.end_date >= expired_threshold
+                )
+            )
+            .order_by(Subscription.end_date.desc())
+        )
+        
+        return result.scalars().all()

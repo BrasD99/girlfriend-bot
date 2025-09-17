@@ -15,6 +15,10 @@ class User(Base, TimestampMixin):
     trial_used = Column(Boolean, default=False)
     trial_start_date = Column(DateTime(timezone=True), nullable=True)
     
+    # Notification tracking
+    last_expiry_notification_sent = Column(DateTime(timezone=True), nullable=True)
+    last_expired_notification_sent = Column(DateTime(timezone=True), nullable=True)
+    
     # Relationships
     subscriptions = relationship("Subscription", back_populates="user")
     girlfriend_profiles = relationship("GirlfriendProfile", back_populates="user")

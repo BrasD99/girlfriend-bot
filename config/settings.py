@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     payment_return_url: Optional[str] = Field(None, env="PAYMENT_RETURN_URL")
     admin_username: Optional[str] = Field(None, env="ADMIN_USERNAME")
     
+    # Subscription Notifications
+    subscription_expiry_notification_days: int = Field(1, env="SUBSCRIPTION_EXPIRY_NOTIFICATION_DAYS")
+    notification_check_interval_hours: int = Field(6, env="NOTIFICATION_CHECK_INTERVAL_HOURS")
+    enable_subscription_notifications: bool = Field(True, env="ENABLE_SUBSCRIPTION_NOTIFICATIONS")
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

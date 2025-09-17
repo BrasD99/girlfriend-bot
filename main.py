@@ -14,9 +14,11 @@ from app.handlers import (
     profile_router,
     profile_edit_router,
     conversation_router,
-    payment_router
+    payment_router,
+    admin_router
 )
 from app.handlers.payment import process_yookassa_webhook, setup_yookassa_webhook
+from app.services.scheduler_service import SchedulerService
 import json
 
 # Настройка логирования
@@ -44,6 +46,9 @@ else:
 # Инициализация диспетчера
 dp = Dispatcher(storage=storage)
 
+# Инициализация планировщика
+scheduler_service = None
+
 
 async def on_startup():
     """Действия при запуске бота"""
@@ -69,12 +74,30 @@ async def on_startup():
     except Exception as e:
         logger.warning(f"Failed to setup YooKassa webhook: {e}")
     
+    # Запускаем планировщик уведомлений
+    global scheduler_service
+    try:
+        scheduler_service = SchedulerService(bot)
+        scheduler_service.start()
+        logger.info("Notification scheduler started")
+    except Exception as e:
+        logger.error(f"Failed to start notification scheduler: {e}")
+    
     logger.info("Bot started successfully")
 
 
 async def on_shutdown():
     """Действия при остановке бота"""
     logger.info("Shutting down bot...")
+    
+    # Останавливаем планировщик
+    global scheduler_service
+    if scheduler_service:
+        try:
+            await scheduler_service.shutdown()
+            logger.info("Notification scheduler stopped")
+        except Exception as e:
+            logger.error(f"Error stopping scheduler: {e}")
     
     # Закрываем соединение с базой данных
     await db_service.close()
@@ -111,6 +134,7 @@ def register_routers():
     dp.include_router(profile_edit_router)
     dp.include_router(conversation_router)
     dp.include_router(payment_router)
+    dp.include_router(admin_router)
 
 
 async def main():
