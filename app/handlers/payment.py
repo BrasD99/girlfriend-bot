@@ -10,7 +10,6 @@ from app.utils.helpers import format_datetime_for_user
 import logging
 from yookassa import Configuration
 from config.settings import settings
-from main import bot
 from app.utils.keyboards import get_subscription_keyboard
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ async def webhook_handler(message: types.Message):
     await message.answer("Webhook handler - используется только для HTTP запросов")
 
 
-async def process_yookassa_webhook(webhook_data: dict) -> bool:
+async def process_yookassa_webhook(webhook_data: dict, bot_instance=None) -> bool:
     """Обработка webhook от YooKassa"""
     try:
         async with db_service.async_session() as session:
@@ -63,7 +62,8 @@ async def process_yookassa_webhook(webhook_data: dict) -> bool:
                                 )
                                 
                                 # Отправляем уведомление пользователю
-                                await _notify_user_subscription_activated(user, plan, subscription)
+                                if bot_instance:
+                                    await _notify_user_subscription_activated(user, plan, subscription, bot_instance)
                                 
                                 logger.info(f"Subscription activated for user {user.telegram_id} with plan {plan.name}")
                                 return True
@@ -77,7 +77,7 @@ async def process_yookassa_webhook(webhook_data: dict) -> bool:
         return False
 
 
-async def _notify_user_subscription_activated(user: User, plan, subscription):
+async def _notify_user_subscription_activated(user: User, plan, subscription, bot_instance):
     """Уведомление пользователя об активации подписки"""
     try:
         success_text = (
@@ -98,7 +98,7 @@ async def _notify_user_subscription_activated(user: User, plan, subscription):
         
         keyboard = get_subscription_keyboard(subscription_info)
         
-        await bot.send_message(
+        await bot_instance.send_message(
             chat_id=user.telegram_id,
             text=success_text,
             reply_markup=keyboard,

@@ -26,6 +26,40 @@ def format_datetime_for_user(dt: datetime, include_time: bool = True) -> str:
         return moscow_dt.strftime("%d.%m.%Y")
 
 
+def format_time_remaining(end_date: datetime) -> str:
+    """Форматирование оставшегося времени до окончания подписки"""
+    if not isinstance(end_date, datetime):
+        return "Неизвестно"
+    
+    # Убеждаемся, что end_date имеет timezone
+    if end_date.tzinfo is None:
+        end_date = end_date.replace(tzinfo=timezone.utc)
+    
+    current_time = datetime.now(timezone.utc)
+    time_diff = end_date - current_time
+    
+    if time_diff.total_seconds() <= 0:
+        return "Истекла"
+    
+    total_seconds = int(time_diff.total_seconds())
+    days = total_seconds // 86400
+    hours = (total_seconds % 86400) // 3600
+    minutes = (total_seconds % 3600) // 60
+    
+    if days > 0:
+        if hours > 0:
+            return f"{days} дн. {hours} ч."
+        else:
+            return f"{days} дн."
+    elif hours > 0:
+        if minutes > 0:
+            return f"{hours} ч. {minutes} мин."
+        else:
+            return f"{hours} ч."
+    else:
+        return f"{minutes} мин."
+
+
 def format_subscription_info(subscription_info: dict) -> str:
     """Форматирование информации о подписке"""
     # Если нет подписки вообще или она истекла
@@ -40,7 +74,6 @@ def format_subscription_info(subscription_info: dict) -> str:
             
             return (
                 "❌ Подписка отменена\n\n"
-                f"📅 Доступ сохранится до {end_date_str}\n\n"
                 "Вы можете возобновить подписку в любое время."
             )
         else:
@@ -63,12 +96,14 @@ def format_subscription_info(subscription_info: dict) -> str:
     else:
         end_date_str = str(end_date)
     
+    # Используем новую функцию для более точного отображения времени
+    time_remaining = format_time_remaining(subscription_info["end_date"])
     days_left = subscription_info["days_left"]
     
     return (
         f"{status_emoji} {status_text}\n\n"
         f"📅 Действует до: {end_date_str}\n"
-        f"⏰ Осталось дней: {days_left}\n\n"
+        f"⏰ Осталось: {time_remaining}\n\n"
         f"{'🔄 Не забудьте продлить подписку!' if days_left <= 3 else '✅ Все функции доступны'}"
     )
 

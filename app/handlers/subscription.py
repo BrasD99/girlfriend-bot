@@ -139,10 +139,7 @@ async def extend_subscription_callback(callback: types.CallbackQuery, state: FSM
 async def cancel_subscription_callback(callback: types.CallbackQuery, user):
     """Отмена подписки"""
     confirmation_text = (
-        "❓ Вы уверены, что хотите отменить подписку?\n\n"
-        "⚠️ После отмены:\n"
-        "• Доступ сохранится до конца текущего периода\n"
-        "• Вы сможете возобновить подписку в любое время"
+        "❓ Вы уверены, что хотите отменить подписку?"
     )
     
     keyboard = get_confirmation_keyboard("subscription_cancel")

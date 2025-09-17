@@ -249,7 +249,7 @@ async def back_to_main_callback(callback: types.CallbackQuery, state: FSMContext
     
     # Отправляем новое сообщение с основной клавиатурой
     await callback.message.answer(
-        "Используйте кнопки ниже для навигации:",
+        "Используйте кнопки для навигации.",
         reply_markup=get_main_keyboard()
     )
     await callback.answer()

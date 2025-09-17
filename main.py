@@ -112,7 +112,7 @@ async def yookassa_webhook_handler(request):
         data = await request.json()
         logger.info(f"Received YooKassa webhook: {data}")
         
-        success = await process_yookassa_webhook(data)
+        success = await process_yookassa_webhook(data, bot)
         
         if success:
             return web.Response(status=200, text="OK")

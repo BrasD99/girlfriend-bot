@@ -3,7 +3,7 @@ from sqlalchemy import select, and_
 from app.models import User, Subscription, SubscriptionStatus
 from app.services.subscription_service import SubscriptionService, get_current_utc_time
 from app.services.database import db_service
-from app.utils.helpers import format_datetime_for_user
+from app.utils.helpers import format_datetime_for_user, format_time_remaining
 from app.utils.keyboards import get_subscription_keyboard
 from datetime import timedelta
 from config.settings import settings
@@ -77,15 +77,8 @@ class NotificationService:
     ) -> bool:
         """Отправка предупреждения об истечении подписки"""
         try:
-            days_left = (subscription.end_date - get_current_utc_time()).days
-            hours_left = (subscription.end_date - get_current_utc_time()).total_seconds() / 3600
-            
-            if days_left <= 0 and hours_left > 0:
-                time_text = f"менее чем через {int(hours_left)} часов"
-            elif days_left == 1:
-                time_text = "завтра"
-            else:
-                time_text = f"через {days_left} дней"
+            time_remaining = format_time_remaining(subscription.end_date)
+            time_text = f"через {time_remaining}"
             
             status_text = "пробный период" if subscription.status == SubscriptionStatus.TRIAL else "подписка"
             
