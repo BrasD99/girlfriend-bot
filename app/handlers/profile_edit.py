@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from app.services.database import db_service
 from app.services.girlfriend_service import GirlfriendService
 from app.utils.keyboards import get_profile_edit_keyboard, get_profile_keyboard, get_cancel_keyboard
-from app.utils.decorators import user_required, error_handler
+from app.utils.decorators import user_required, error_handler, rate_limit
 from app.utils.helpers import format_profile_info, validate_age, validate_name
 from app.utils.states import ProfileEditing
 import logging
@@ -149,6 +149,7 @@ async def edit_done_callback(callback: types.CallbackQuery, user):
 # Обработчики сообщений для редактирования профиля
 @router.message(ProfileEditing.waiting_for_name)
 @error_handler
+@rate_limit
 @user_required
 async def process_edit_name(message: types.Message, state: FSMContext, user):
     """Обработка нового имени"""
@@ -184,6 +185,7 @@ async def process_edit_name(message: types.Message, state: FSMContext, user):
 
 @router.message(ProfileEditing.waiting_for_age)
 @error_handler
+@rate_limit
 @user_required
 async def process_edit_age(message: types.Message, state: FSMContext, user):
     """Обработка нового возраста"""
@@ -219,6 +221,7 @@ async def process_edit_age(message: types.Message, state: FSMContext, user):
 
 @router.message(ProfileEditing.waiting_for_personality)
 @error_handler
+@rate_limit
 @user_required
 async def process_edit_personality(message: types.Message, state: FSMContext, user):
     """Обработка нового характера"""
@@ -254,6 +257,7 @@ async def process_edit_personality(message: types.Message, state: FSMContext, us
 
 @router.message(ProfileEditing.waiting_for_appearance)
 @error_handler
+@rate_limit
 @user_required
 async def process_edit_appearance(message: types.Message, state: FSMContext, user):
     """Обработка новой внешности"""
@@ -289,6 +293,7 @@ async def process_edit_appearance(message: types.Message, state: FSMContext, use
 
 @router.message(ProfileEditing.waiting_for_interests)
 @error_handler
+@rate_limit
 @user_required
 async def process_edit_interests(message: types.Message, state: FSMContext, user):
     """Обработка новых интересов"""
@@ -318,6 +323,7 @@ async def process_edit_interests(message: types.Message, state: FSMContext, user
 
 @router.message(ProfileEditing.waiting_for_background)
 @error_handler
+@rate_limit
 @user_required
 async def process_edit_background(message: types.Message, state: FSMContext, user):
     """Обработка новой предыстории"""
@@ -347,6 +353,7 @@ async def process_edit_background(message: types.Message, state: FSMContext, use
 
 @router.message(ProfileEditing.waiting_for_communication_style)
 @error_handler
+@rate_limit
 @user_required
 async def process_edit_communication_style(message: types.Message, state: FSMContext, user):
     """Обработка нового стиля общения"""

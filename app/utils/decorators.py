@@ -3,6 +3,7 @@ from aiogram import types
 from app.services.database import db_service
 from app.services.user_service import UserService
 from app.services.subscription_service import SubscriptionService
+from app.services.redis_rate_limiter import redis_rate_limiter
 import logging
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,65 @@ def subscription_required(func):
         
         # Если подписка есть, выполняем функцию
         return await func(message_or_callback, *args, **kwargs)
+    
+    return wrapper
+
+
+def rate_limit(func):
+    """Декоратор для применения rate limiting"""
+    @wraps(func)
+    async def wrapper(message_or_callback, *args, **kwargs):
+        # Определяем тип объекта и получаем user_id
+        if isinstance(message_or_callback, types.Message):
+            user_id = message_or_callback.from_user.id
+            chat_id = message_or_callback.chat.id
+            bot = message_or_callback.bot
+        elif isinstance(message_or_callback, types.CallbackQuery):
+            user_id = message_or_callback.from_user.id
+            chat_id = message_or_callback.message.chat.id
+            bot = message_or_callback.bot
+        else:
+            logger.error("Unsupported object type in rate_limit decorator")
+            return
+        
+        # Проверяем rate limit
+        limit_result = await redis_rate_limiter.check_rate_limit(user_id)
+        
+        # Если пользователь забанен
+        if limit_result['banned']:
+            ban_remaining = limit_result['ban_remaining']
+            if ban_remaining > 0:
+                await bot.send_message(
+                    chat_id,
+                    f"🚫 **Слишком много сообщений!**\n\n"
+                    f"Вы временно ограничены в отправке сообщений.\n"
+                    f"⏰ Попробуйте снова через {ban_remaining} сек.",
+                    parse_mode="Markdown"
+                )
+            return
+        
+        # Если нужно показать предупреждение
+        if limit_result['warning']:
+            await bot.send_message(
+                chat_id,
+                f"⚠️ **Внимание!**\n\n"
+                f"Вы отправляете сообщения слишком быстро.\n"
+                f"Осталось сообщений: {limit_result['remaining']}\n"
+                f"При превышении лимита вы будете временно ограничены.",
+                parse_mode="Markdown"
+            )
+        
+        # Если лимит не превышен, записываем сообщение и выполняем функцию
+        if limit_result['allowed']:
+            await redis_rate_limiter.record_message(user_id)
+            return await func(message_or_callback, *args, **kwargs)
+        else:
+            # Лимит превышен, но пользователь еще не забанен (не должно происходить)
+            await bot.send_message(
+                chat_id,
+                "🚫 Превышен лимит сообщений. Попробуйте позже."
+            )
+            return
     
     return wrapper
 

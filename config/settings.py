@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     notification_check_interval_hours: int = Field(6, env="NOTIFICATION_CHECK_INTERVAL_HOURS")
     enable_subscription_notifications: bool = Field(True, env="ENABLE_SUBSCRIPTION_NOTIFICATIONS")
     
+    # Rate Limiting
+    enable_rate_limiting: bool = Field(True, env="ENABLE_RATE_LIMITING")
+    rate_limit_messages_per_minute: int = Field(10, env="RATE_LIMIT_MESSAGES_PER_MINUTE")
+    rate_limit_ban_duration_seconds: int = Field(30, env="RATE_LIMIT_BAN_DURATION_SECONDS")
+    rate_limit_warning_threshold: int = Field(8, env="RATE_LIMIT_WARNING_THRESHOLD")
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

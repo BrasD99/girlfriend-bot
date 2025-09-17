@@ -7,7 +7,7 @@ from app.services.girlfriend_service import GirlfriendService
 from app.services.conversation_service import ConversationService
 from app.services.gemini_service import GeminiService
 from app.utils.keyboards import get_conversation_keyboard, get_confirmation_keyboard, get_main_keyboard
-from app.utils.decorators import user_required, subscription_required, error_handler
+from app.utils.decorators import user_required, subscription_required, error_handler, rate_limit
 from app.utils.helpers import format_conversation_stats
 from app.utils.states import Conversation
 import logging
@@ -81,6 +81,7 @@ async def start_conversation(message: types.Message, state: FSMContext, user):
 
 @router.message(Conversation.chatting)
 @error_handler
+@rate_limit
 @user_required
 async def handle_conversation_message(message: types.Message, state: FSMContext, user):
     """Обработка сообщений в режиме общения"""

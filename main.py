@@ -18,6 +18,7 @@ from app.handlers import (
 )
 from app.handlers.payment import process_yookassa_webhook, setup_yookassa_webhook
 from app.services.scheduler_service import SchedulerService
+from app.services.redis_rate_limiter import redis_rate_limiter
 
 # Настройка логирования
 logging.basicConfig(
@@ -72,6 +73,15 @@ async def on_startup():
     except Exception as e:
         logger.warning(f"Failed to setup YooKassa webhook: {e}")
     
+    # Инициализируем Redis rate limiter
+    if settings.enable_rate_limiting and settings.redis_url:
+        try:
+            # Проверяем подключение к Redis
+            await redis_rate_limiter._get_redis()
+            logger.info("Redis rate limiter initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Redis rate limiter: {e}")
+    
     # Запускаем планировщик уведомлений
     global scheduler_service
     try:
@@ -96,6 +106,13 @@ async def on_shutdown():
             logger.info("Notification scheduler stopped")
         except Exception as e:
             logger.error(f"Error stopping scheduler: {e}")
+    
+    # Закрываем соединение с Redis rate limiter
+    try:
+        await redis_rate_limiter.close()
+        logger.info("Redis rate limiter connection closed")
+    except Exception as e:
+        logger.error(f"Error closing Redis rate limiter: {e}")
     
     # Закрываем соединение с базой данных
     await db_service.close()
