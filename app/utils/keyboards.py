@@ -1,7 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
-
 def get_main_keyboard() -> ReplyKeyboardMarkup:
     """Основная клавиатура"""
     builder = ReplyKeyboardBuilder()

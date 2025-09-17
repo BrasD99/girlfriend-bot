@@ -3,14 +3,13 @@ from sqlalchemy.orm import relationship
 from .base import Base, TimestampMixin
 from enum import Enum
 from decimal import Decimal
-
+import json
 
 class PlanType(str, Enum):
     TRIAL = "trial"
     MONTHLY = "monthly"
     QUARTERLY = "quarterly"
     YEARLY = "yearly"
-
 
 class SubscriptionPlan(Base, TimestampMixin):
     __tablename__ = "subscription_plans"
@@ -54,7 +53,6 @@ class SubscriptionPlan(Base, TimestampMixin):
     
     def get_features_list(self) -> list:
         """Получение списка особенностей плана"""
-        import json
         if self.features:
             try:
                 return json.loads(self.features)
@@ -64,5 +62,4 @@ class SubscriptionPlan(Base, TimestampMixin):
     
     def set_features_list(self, features: list):
         """Установка списка особенностей плана"""
-        import json
         self.features = json.dumps(features, ensure_ascii=False)

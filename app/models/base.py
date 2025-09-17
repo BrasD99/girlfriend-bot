@@ -4,7 +4,6 @@ from sqlalchemy.sql import func
 
 Base = declarative_base()
 
-
 class TimestampMixin:
     """Миксин для добавления временных меток"""
     id = Column(Integer, primary_key=True, autoincrement=True)

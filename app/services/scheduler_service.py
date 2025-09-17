@@ -3,10 +3,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.services.notification_service import NotificationService
 from config.settings import settings
 import logging
-import asyncio
 
 logger = logging.getLogger(__name__)
-
 
 class SchedulerService:
     def __init__(self, bot):

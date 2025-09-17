@@ -7,7 +7,7 @@ from app.services.subscription_service import SubscriptionService
 
 from app.utils.keyboards import get_main_keyboard
 from app.utils.decorators import user_required, error_handler
-from app.utils.helpers import get_greeting_message, format_datetime_for_user
+from app.utils.helpers import get_greeting_message
 from config.settings import settings
 import logging
 

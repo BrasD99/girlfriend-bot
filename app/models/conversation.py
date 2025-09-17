@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, ForeignKey, Text, String, Boolean
 from sqlalchemy.orm import relationship
 from .base import Base, TimestampMixin
 
-
 class Conversation(Base, TimestampMixin):
     __tablename__ = "conversations"
     

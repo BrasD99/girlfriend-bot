@@ -14,12 +14,10 @@ from app.handlers import (
     profile_router,
     profile_edit_router,
     conversation_router,
-    payment_router,
-    admin_router
+    payment_router
 )
 from app.handlers.payment import process_yookassa_webhook, setup_yookassa_webhook
 from app.services.scheduler_service import SchedulerService
-import json
 
 # Настройка логирования
 logging.basicConfig(
@@ -134,8 +132,6 @@ def register_routers():
     dp.include_router(profile_edit_router)
     dp.include_router(conversation_router)
     dp.include_router(payment_router)
-    dp.include_router(admin_router)
-
 
 async def main():
     """Основная функция"""
@@ -194,7 +190,6 @@ async def main():
         
         # Запускаем polling
         await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     try:

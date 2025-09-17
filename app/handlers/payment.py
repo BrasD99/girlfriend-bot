@@ -3,7 +3,6 @@ from aiogram.filters import Command
 from app.services.database import db_service
 from app.services.payment_service import PaymentService
 from app.services.subscription_service import SubscriptionService
-from app.services.user_service import UserService
 from app.services.subscription_plan_service import SubscriptionPlanService
 from app.models import User
 from app.utils.decorators import error_handler
@@ -11,6 +10,8 @@ from app.utils.helpers import format_datetime_for_user
 import logging
 from yookassa import Configuration
 from config.settings import settings
+from main import bot
+from app.utils.keyboards import get_subscription_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -79,9 +80,6 @@ async def process_yookassa_webhook(webhook_data: dict) -> bool:
 async def _notify_user_subscription_activated(user: User, plan, subscription):
     """Уведомление пользователя об активации подписки"""
     try:
-        from main import bot
-        from app.utils.keyboards import get_subscription_keyboard
-        
         success_text = (
             "🎉 **Оплата прошла успешно!**\n\n"
             f"✅ Подписка '{plan.name}' активирована\n"

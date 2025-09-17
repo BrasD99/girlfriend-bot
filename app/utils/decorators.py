@@ -1,13 +1,11 @@
 from functools import wraps
 from aiogram import types
-from aiogram.fsm.context import FSMContext
 from app.services.database import db_service
 from app.services.user_service import UserService
 from app.services.subscription_service import SubscriptionService
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 def subscription_required(func):
     """Декоратор для проверки наличия активной подписки"""

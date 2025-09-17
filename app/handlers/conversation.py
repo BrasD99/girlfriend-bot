@@ -6,7 +6,7 @@ from app.services.database import db_service
 from app.services.girlfriend_service import GirlfriendService
 from app.services.conversation_service import ConversationService
 from app.services.gemini_service import GeminiService
-from app.utils.keyboards import get_conversation_keyboard, get_confirmation_keyboard
+from app.utils.keyboards import get_conversation_keyboard, get_confirmation_keyboard, get_main_keyboard
 from app.utils.decorators import user_required, subscription_required, error_handler
 from app.utils.helpers import format_conversation_stats
 from app.utils.states import Conversation
@@ -242,8 +242,6 @@ async def back_to_main_callback(callback: types.CallbackQuery, state: FSMContext
     """Возврат в главное меню"""
     await state.clear()
     
-    from app.utils.keyboards import get_main_keyboard
-    
     await callback.message.edit_text(
         "🏠 Главное меню\n\nВыберите действие:",
         reply_markup=None
@@ -266,8 +264,6 @@ async def stop_conversation(message: types.Message, state: FSMContext):
     
     if current_state == Conversation.chatting:
         await state.clear()
-        
-        from app.utils.keyboards import get_main_keyboard
         
         await message.answer(
             "✅ Общение завершено.\n\nВы можете вернуться к общению в любое время!",

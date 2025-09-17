@@ -8,12 +8,12 @@ from app.services.subscription_plan_service import SubscriptionPlanService
 from app.services.payment_service import PaymentService
 from app.utils.keyboards import (
     get_subscription_keyboard, get_confirmation_keyboard,
-    get_subscription_plans_keyboard, get_plan_details_keyboard
+    get_subscription_plans_keyboard, get_plan_details_keyboard,
+    get_payment_keyboard
 )
 from app.utils.decorators import user_required, error_handler
 from app.utils.helpers import format_subscription_info, safe_edit_message
 from app.utils.states import Payment as PaymentState
-from app.models import Payment
 from config.settings import settings
 from decimal import Decimal
 import logging
@@ -85,7 +85,6 @@ async def buy_subscription_callback(callback: types.CallbackQuery, state: FSMCon
                 f"Нажмите кнопку 'Оплатить' для перехода к оплате."
             )
             
-            from app.utils.keyboards import get_payment_keyboard
             keyboard = get_payment_keyboard(payment.confirmation_url)
             
             await callback.message.edit_text(
@@ -296,8 +295,7 @@ async def confirm_buy_plan_callback(callback: types.CallbackQuery, state: FSMCon
                 f"Нажмите кнопку 'Оплатить' для перехода к оплате.\n"
                 f"После успешной оплаты подписка будет активирована автоматически."
             )
-            
-            from app.utils.keyboards import get_payment_keyboard
+
             keyboard = get_payment_keyboard(payment.confirmation_url)
             
             await callback.message.edit_text(

@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
-from app.models import Subscription, GirlfriendProfile
+from app.models import GirlfriendProfile
 from typing import Optional
-
 
 def utc_to_moscow_time(utc_datetime: datetime) -> datetime:
     """Конвертация UTC времени в московское время (UTC+3)"""

@@ -11,7 +11,6 @@ import logging
 logger = logging.getLogger(__name__)
 router = Router()
 
-
 # Обработчики для редактирования профиля
 @router.callback_query(F.data == "edit_name")
 @error_handler

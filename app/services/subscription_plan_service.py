@@ -7,7 +7,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class SubscriptionPlanService:
     @staticmethod
     async def get_all_active_plans(session: AsyncSession) -> List[SubscriptionPlan]:

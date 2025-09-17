@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
 
-
 class Settings(BaseSettings):
     # Telegram Bot
     bot_token: str = Field(..., env="BOT_TOKEN")
@@ -47,6 +46,5 @@ class Settings(BaseSettings):
             return f"https://t.me/{self.bot_username}"
         else:
             return "https://t.me/"  # Fallback на главную страницу Telegram
-
 
 settings = Settings()

@@ -1,7 +1,6 @@
-from sqlalchemy import Column, BigInteger, String, Boolean, DateTime, Integer
+from sqlalchemy import Column, BigInteger, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from .base import Base, TimestampMixin
-
 
 class User(Base, TimestampMixin):
     __tablename__ = "users"

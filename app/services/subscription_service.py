@@ -8,11 +8,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 def get_current_utc_time():
     """Получение текущего времени в UTC с timezone"""
     return datetime.now(timezone.utc)
-
 
 class SubscriptionService:
     @staticmethod

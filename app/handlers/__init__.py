@@ -4,7 +4,6 @@ from .profile import router as profile_router
 from .profile_edit import router as profile_edit_router
 from .conversation import router as conversation_router
 from .payment import router as payment_router
-from .admin import router as admin_router
 
 __all__ = [
     "start_router",
@@ -12,6 +11,5 @@ __all__ = [
     "profile_router",
     "profile_edit_router",
     "conversation_router",
-    "payment_router",
-    "admin_router"
+    "payment_router"
 ]

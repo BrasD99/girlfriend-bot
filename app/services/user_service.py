@@ -2,17 +2,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.models import User
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
 
-
 def get_current_utc_time():
     """Получение текущего времени в UTC с timezone"""
     return datetime.now(timezone.utc)
-
 
 class UserService:
     @staticmethod

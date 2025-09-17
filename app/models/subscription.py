@@ -3,13 +3,11 @@ from sqlalchemy.orm import relationship
 from .base import Base, TimestampMixin
 from enum import Enum
 
-
 class SubscriptionStatus(str, Enum):
     ACTIVE = "active"
     EXPIRED = "expired"
     CANCELLED = "cancelled"
     TRIAL = "trial"
-
 
 class Subscription(Base, TimestampMixin):
     __tablename__ = "subscriptions"

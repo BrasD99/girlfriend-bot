@@ -1,11 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
-from app.models import Conversation, GirlfriendProfile
+from app.models import Conversation
 from typing import List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class ConversationService:
     @staticmethod

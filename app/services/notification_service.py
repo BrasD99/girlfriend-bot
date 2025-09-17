@@ -1,14 +1,16 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from app.models import User, Subscription, SubscriptionStatus
-from app.services.subscription_service import get_current_utc_time
-from datetime import datetime, timedelta, timezone
+from app.services.subscription_service import SubscriptionService, get_current_utc_time
+from app.services.database import db_service
+from app.utils.helpers import format_datetime_for_user
+from app.utils.keyboards import get_subscription_keyboard
+from datetime import timedelta
 from config.settings import settings
-from typing import List, Optional
+from typing import List
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class NotificationService:
     @staticmethod
@@ -75,10 +77,6 @@ class NotificationService:
     ) -> bool:
         """Отправка предупреждения об истечении подписки"""
         try:
-            from app.utils.helpers import format_datetime_for_user
-            from app.utils.keyboards import get_subscription_keyboard
-            from app.services.subscription_service import SubscriptionService
-            
             days_left = (subscription.end_date - get_current_utc_time()).days
             hours_left = (subscription.end_date - get_current_utc_time()).total_seconds() / 3600
             
@@ -133,10 +131,6 @@ class NotificationService:
     ) -> bool:
         """Отправка уведомления об истечении подписки"""
         try:
-            from app.utils.helpers import format_datetime_for_user
-            from app.utils.keyboards import get_subscription_keyboard
-            from app.services.subscription_service import SubscriptionService
-            
             status_text = "пробный период" if subscription.status == SubscriptionStatus.TRIAL else "подписка"
             
             expired_text = (
@@ -184,8 +178,6 @@ class NotificationService:
         if not settings.enable_subscription_notifications:
             logger.info("Subscription notifications are disabled")
             return {"expiry_warnings": 0, "expired_notifications": 0, "errors": 0}
-        
-        from app.services.database import db_service
         
         stats = {
             "expiry_warnings": 0,

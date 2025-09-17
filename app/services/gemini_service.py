@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 # Настройка Gemini API
 genai.configure(api_key=settings.gemini_api_key)
 
-
 def extract_json_from_markdown(text: str) -> str:
     """Извлечение JSON из markdown блока кода"""
     # Поиск JSON в блоке кода ```json...```

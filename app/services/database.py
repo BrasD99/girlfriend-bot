@@ -6,7 +6,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class DatabaseService:
     def __init__(self):
         self.engine = create_async_engine(

@@ -3,13 +3,11 @@ from sqlalchemy.orm import relationship
 from .base import Base, TimestampMixin
 from enum import Enum
 
-
 class PaymentStatus(str, Enum):
     PENDING = "pending"
     SUCCEEDED = "succeeded"
     CANCELLED = "cancelled"
     FAILED = "failed"
-
 
 class Payment(Base, TimestampMixin):
     __tablename__ = "payments"

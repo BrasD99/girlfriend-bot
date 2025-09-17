@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 Configuration.account_id = settings.yookassa_shop_id
 Configuration.secret_key = settings.yookassa_secret_key
 
-
 class PaymentService:
     @staticmethod
     async def create_payment(

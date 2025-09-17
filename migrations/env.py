@@ -1,19 +1,16 @@
 from logging.config import fileConfig
-import os
 import sys
 from pathlib import Path
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
 from alembic import context
+from config.settings import settings
+from app.models import Base
+from dotenv import load_dotenv
 
 # Добавляем корневую директорию проекта в sys.path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-# Загружаем переменные окружения из .env файлов
-from dotenv import load_dotenv
 
 # Пытаемся загрузить .env файлы в порядке приоритета
 env_files = [
@@ -29,10 +26,6 @@ for env_file in env_files:
         break
 else:
     print("Warning: No .env file found")
-
-# Импортируем настройки и модели
-from config.settings import settings
-from app.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

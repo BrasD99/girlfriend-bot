@@ -6,7 +6,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class GirlfriendService:
     @staticmethod
     async def create_girlfriend_profile(
