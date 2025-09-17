@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     webhook_path: str = Field("/webhook", env="WEBHOOK_PATH")
     bot_username: Optional[str] = Field(None, env="BOT_USERNAME")
     payment_return_url: Optional[str] = Field(None, env="PAYMENT_RETURN_URL")
+    admin_username: Optional[str] = Field(None, env="ADMIN_USERNAME")
     
     class Config:
         env_file = ".env"

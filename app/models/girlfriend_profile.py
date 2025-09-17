@@ -19,7 +19,7 @@ class GirlfriendProfile(Base, TimestampMixin):
     
     # Relationships
     user = relationship("User", back_populates="girlfriend_profiles")
-    conversations = relationship("Conversation", back_populates="girlfriend_profile")
+    conversations = relationship("Conversation", back_populates="girlfriend_profile", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<GirlfriendProfile(name={self.name}, user_id={self.user_id})>"

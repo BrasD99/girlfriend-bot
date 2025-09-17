@@ -12,9 +12,6 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
     )
     builder.row(
         KeyboardButton(text="💎 Подписка"),
-        KeyboardButton(text="⚙️ Настройки")
-    )
-    builder.row(
         KeyboardButton(text="ℹ️ Помощь")
     )
     

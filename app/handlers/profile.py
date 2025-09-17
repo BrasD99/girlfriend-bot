@@ -348,13 +348,17 @@ async def view_profile_callback(callback: types.CallbackQuery, user):
         
         if profile:
             text = f"👤 **Профиль девушки:**\n\n{format_profile_info(profile)}"
-            await safe_edit_message(
+            was_edited = await safe_edit_message(
                 callback.message,
                 text,
                 reply_markup=get_profile_keyboard(True),
                 parse_mode="Markdown"
             )
-            await callback.answer("👤 Профиль обновлен")
+            
+            if was_edited:
+                await callback.answer("👤 Профиль обновлен")
+            else:
+                await callback.answer("👤 Профиль уже отображается")
         else:
             await callback.answer("❌ Профиль не найден", show_alert=True)
 
@@ -368,12 +372,17 @@ async def edit_profile_callback(callback: types.CallbackQuery):
         "Выберите, что хотите изменить:"
     )
     
-    await callback.message.edit_text(
+    was_edited = await safe_edit_message(
+        callback.message,
         text,
         reply_markup=get_profile_edit_keyboard(),
         parse_mode="Markdown"
     )
-    await callback.answer()
+    
+    if was_edited:
+        await callback.answer("✏️ Меню редактирования")
+    else:
+        await callback.answer()
 
 
 @router.callback_query(F.data == "delete_profile")
@@ -388,8 +397,17 @@ async def delete_profile_callback(callback: types.CallbackQuery):
     
     keyboard = get_confirmation_keyboard("profile_delete")
     
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
-    await callback.answer()
+    was_edited = await safe_edit_message(
+        callback.message,
+        text,
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+    
+    if was_edited:
+        await callback.answer("🗑 Подтвердите удаление")
+    else:
+        await callback.answer()
 
 
 @router.callback_query(F.data == "confirm_profile_delete")
@@ -408,10 +426,32 @@ async def confirm_delete_profile(callback: types.CallbackQuery, user):
                 "Вы можете создать новый профиль в любое время."
             )
             
-            await callback.message.edit_text(
+            await safe_edit_message(
+                callback.message,
                 text,
                 reply_markup=get_profile_keyboard(False)
             )
             await callback.answer("Профиль удален")
+        else:
+            await callback.answer("❌ Профиль не найден", show_alert=True)
+
+
+@router.callback_query(F.data == "cancel_profile_delete")
+@error_handler
+@user_required
+async def cancel_delete_profile(callback: types.CallbackQuery, user):
+    """Отмена удаления профиля"""
+    async with db_service.async_session() as session:
+        profile = await GirlfriendService.get_active_profile(session, user.id)
+        
+        if profile:
+            text = f"👤 **Профиль девушки:**\n\n{format_profile_info(profile)}"
+            await safe_edit_message(
+                callback.message,
+                text,
+                reply_markup=get_profile_keyboard(True),
+                parse_mode="Markdown"
+            )
+            await callback.answer("❌ Удаление отменено")
         else:
             await callback.answer("❌ Профиль не найден", show_alert=True)

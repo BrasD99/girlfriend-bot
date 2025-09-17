@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from app.services.database import db_service
 from app.services.user_service import UserService
 from app.services.subscription_service import SubscriptionService
+
 from app.utils.keyboards import get_main_keyboard
 from app.utils.decorators import user_required, error_handler
 from app.utils.helpers import get_greeting_message, format_datetime_for_user
@@ -99,6 +100,11 @@ async def start_command(message: types.Message, state: FSMContext, user):
 @error_handler
 async def help_command(message: types.Message):
     """Обработчик команды /help"""
+    # Формируем ссылку на поддержку
+    support_text = "По всем вопросам обращайтесь в поддержку"
+    if settings.admin_username:
+        support_text = f"По всем вопросам обращайтесь: @{settings.admin_username}"
+    
     help_text = (
         "🤖 **Помощь по использованию бота**\n\n"
         
@@ -115,12 +121,10 @@ async def help_command(message: types.Message):
         "3️⃣ Начните общение в разделе '💬 Общение'\n\n"
         
         "**Подписка:**\n"
-        "• 🎁 7 дней бесплатно для новых пользователей\n"
-        "• 💎 299₽/месяц для полного доступа\n"
-        "• 🔄 Автоматическое продление\n\n"
+        "• 💰 Посмотреть все тарифы: /subscription\n\n"
         
-        "**Поддержка:**\n"
-        "По всем вопросам обращайтесь: @support_username"
+        f"**Поддержка:**\n"
+        f"{support_text}"
     )
     
     await message.answer(help_text, parse_mode="Markdown")
@@ -131,29 +135,3 @@ async def help_command(message: types.Message):
 async def help_button(message: types.Message):
     """Обработчик кнопки помощи"""
     await help_command(message)
-
-
-@router.message(F.text == "⚙️ Настройки")
-@error_handler
-@user_required
-async def settings_button(message: types.Message, user):
-    """Обработчик кнопки настроек"""
-    async with db_service.async_session() as session:
-        subscription_info = await SubscriptionService.get_subscription_info(session, user.id)
-    
-    settings_text = (
-        f"⚙️ **Настройки аккаунта**\n\n"
-        f"👤 **Информация о пользователе:**\n"
-        f"ID: {user.telegram_id}\n"
-        f"Имя: {user.first_name or 'Не указано'}\n"
-        f"Username: @{user.username or 'Не указан'}\n"
-        f"Язык: {user.language_code}\n\n"
-        f"💎 **Подписка:**\n"
-        f"Статус: {'Активна' if subscription_info['has_subscription'] else 'Неактивна'}\n"
-        f"Пробный период: {'Использован' if user.trial_used else 'Доступен'}\n\n"
-        f"📊 **Статистика:**\n"
-        f"Дата регистрации: {format_datetime_for_user(user.created_at, include_time=False)}\n"
-        f"Последняя активность: {format_datetime_for_user(user.updated_at, include_time=True)}"
-    )
-    
-    await message.answer(settings_text, parse_mode="Markdown")

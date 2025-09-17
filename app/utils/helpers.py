@@ -41,7 +41,6 @@ def format_subscription_info(subscription_info: dict) -> str:
             
             return (
                 "❌ Подписка отменена\n\n"
-                "🔄 Автопродление отключено\n"
                 f"📅 Доступ сохранится до {end_date_str}\n\n"
                 "Вы можете возобновить подписку в любое время."
             )
@@ -194,20 +193,28 @@ def is_trial_expired(trial_start_date: datetime, trial_days: int) -> bool:
 
 async def safe_edit_message(message, new_text: str, reply_markup=None, parse_mode=None):
     """Безопасное редактирование сообщения (избегает ошибки 'message is not modified')"""
-    current_text = message.text or ""
-    current_markup = message.reply_markup
-    
-    # Проверяем, отличается ли новый контент
-    text_changed = current_text != new_text
-    markup_changed = current_markup != reply_markup
-    
-    if text_changed or markup_changed:
-        kwargs = {"text": new_text}
-        if reply_markup is not None:
-            kwargs["reply_markup"] = reply_markup
-        if parse_mode is not None:
-            kwargs["parse_mode"] = parse_mode
-            
-        await message.edit_text(**kwargs)
-        return True
-    return False
+    try:
+        current_text = message.text or ""
+        
+        # Проверяем, отличается ли новый текст
+        text_changed = current_text.strip() != new_text.strip()
+        
+        # Для клавиатуры делаем более простую проверку - если передана новая клавиатура, считаем что она изменилась
+        markup_changed = reply_markup is not None
+        
+        if text_changed or markup_changed:
+            kwargs = {"text": new_text}
+            if reply_markup is not None:
+                kwargs["reply_markup"] = reply_markup
+            if parse_mode is not None:
+                kwargs["parse_mode"] = parse_mode
+                
+            await message.edit_text(**kwargs)
+            return True
+        return False
+    except Exception as e:
+        # Если произошла ошибка "message is not modified", просто игнорируем её
+        if "message is not modified" in str(e).lower():
+            return False
+        # Для других ошибок - пробрасываем дальше
+        raise e
