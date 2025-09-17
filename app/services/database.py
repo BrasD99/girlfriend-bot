@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.pool import NullPool
 from config.settings import settings
 from app.models import Base
+from typing import AsyncGenerator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class DatabaseService:
             await conn.run_sync(Base.metadata.drop_all)
             logger.info("Database tables dropped successfully")
     
-    async def get_session(self) -> AsyncSession:
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """Получение сессии базы данных"""
         async with self.async_session() as session:
             try:
