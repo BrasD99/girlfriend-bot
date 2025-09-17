@@ -14,6 +14,7 @@ router = Router()
 # Обработчики для редактирования профиля
 @router.callback_query(F.data == "edit_name")
 @error_handler
+@rate_limit
 async def edit_name_callback(callback: types.CallbackQuery, state: FSMContext):
     """Редактирование имени"""
     await state.set_state(ProfileEditing.waiting_for_name)
@@ -29,6 +30,7 @@ async def edit_name_callback(callback: types.CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "edit_age")
 @error_handler
+@rate_limit
 async def edit_age_callback(callback: types.CallbackQuery, state: FSMContext):
     """Редактирование возраста"""
     await state.set_state(ProfileEditing.waiting_for_age)
@@ -44,6 +46,7 @@ async def edit_age_callback(callback: types.CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "edit_personality")
 @error_handler
+@rate_limit
 async def edit_personality_callback(callback: types.CallbackQuery, state: FSMContext):
     """Редактирование характера"""
     await state.set_state(ProfileEditing.waiting_for_personality)
@@ -124,6 +127,7 @@ async def edit_communication_callback(callback: types.CallbackQuery, state: FSMC
 
 @router.callback_query(F.data == "edit_done")
 @error_handler
+@rate_limit
 @user_required
 async def edit_done_callback(callback: types.CallbackQuery, user):
     """Завершение редактирования"""
@@ -384,6 +388,7 @@ async def process_edit_communication_style(message: types.Message, state: FSMCon
 # Обработчик отмены редактирования
 @router.callback_query(F.data == "cancel_edit")
 @error_handler
+@rate_limit
 @user_required
 async def cancel_edit_callback(callback: types.CallbackQuery, state: FSMContext, user):
     """Отмена редактирования"""

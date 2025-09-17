@@ -8,7 +8,7 @@ from app.utils.keyboards import (
     get_profile_keyboard, get_profile_creation_keyboard, 
     get_profile_edit_keyboard, get_confirmation_keyboard
 )
-from app.utils.decorators import user_required, subscription_required, error_handler
+from app.utils.decorators import user_required, subscription_required, error_handler, rate_limit
 from app.utils.helpers import format_profile_info, validate_age, validate_name, safe_edit_message
 from app.utils.states import ProfileCreation, ProfileEditing
 import logging
@@ -23,8 +23,8 @@ gemini_service = GeminiService()
 @router.message(Command("profile"))
 @router.message(F.text == "👤 Профиль девушки")
 @error_handler
+@rate_limit
 @user_required
-@subscription_required
 async def profile_menu(message: types.Message, user):
     """Меню управления профилем девушки"""
     async with db_service.async_session() as session:
@@ -46,7 +46,9 @@ async def profile_menu(message: types.Message, user):
 
 @router.callback_query(F.data == "create_profile")
 @error_handler
-async def create_profile_callback(callback: types.CallbackQuery):
+@rate_limit
+@user_required
+async def create_profile_callback(callback: types.CallbackQuery, user):
     """Выбор способа создания профиля"""
     text = (
         "👤 **Создание профиля девушки**\n\n"
@@ -340,6 +342,7 @@ async def process_ai_preferences(message: types.Message, state: FSMContext, user
 # Просмотр и редактирование профиля
 @router.callback_query(F.data == "view_profile")
 @error_handler
+@rate_limit
 @user_required
 async def view_profile_callback(callback: types.CallbackQuery, user):
     """Просмотр профиля"""
@@ -365,7 +368,9 @@ async def view_profile_callback(callback: types.CallbackQuery, user):
 
 @router.callback_query(F.data == "edit_profile")
 @error_handler
-async def edit_profile_callback(callback: types.CallbackQuery):
+@rate_limit
+@user_required
+async def edit_profile_callback(callback: types.CallbackQuery, user):
     """Редактирование профиля"""
     text = (
         "✏️ **Редактирование профиля**\n\n"

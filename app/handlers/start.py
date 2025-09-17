@@ -6,7 +6,7 @@ from app.services.user_service import UserService
 from app.services.subscription_service import SubscriptionService
 
 from app.utils.keyboards import get_main_keyboard
-from app.utils.decorators import user_required, error_handler
+from app.utils.decorators import user_required, error_handler, rate_limit
 from app.utils.helpers import get_greeting_message, format_time_remaining
 from config.settings import settings
 import logging
@@ -133,6 +133,7 @@ async def help_command(message: types.Message):
 
 @router.message(F.text == "ℹ️ Помощь")
 @error_handler
+@rate_limit
 async def help_button(message: types.Message):
     """Обработчик кнопки помощи"""
     await help_command(message)

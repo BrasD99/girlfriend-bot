@@ -22,6 +22,7 @@ gemini_service = GeminiService()
 @router.message(Command("chat"))
 @router.message(F.text == "💬 Общение")
 @error_handler
+@rate_limit
 @user_required
 @subscription_required
 async def start_conversation(message: types.Message, state: FSMContext, user):
@@ -156,6 +157,7 @@ async def handle_conversation_message(message: types.Message, state: FSMContext,
 
 @router.callback_query(F.data == "clear_history")
 @error_handler
+@rate_limit
 async def clear_history_callback(callback: types.CallbackQuery):
     """Очистка истории разговора"""
     text = (
@@ -213,6 +215,7 @@ async def cancel_clear_history(callback: types.CallbackQuery):
 
 @router.callback_query(F.data == "conversation_stats")
 @error_handler
+@rate_limit
 @user_required
 async def conversation_stats_callback(callback: types.CallbackQuery, state: FSMContext, user):
     """Статистика разговора"""
@@ -239,6 +242,7 @@ async def conversation_stats_callback(callback: types.CallbackQuery, state: FSMC
 
 @router.callback_query(F.data == "back_to_main")
 @error_handler
+@rate_limit
 async def back_to_main_callback(callback: types.CallbackQuery, state: FSMContext):
     """Возврат в главное меню"""
     await state.clear()

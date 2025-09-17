@@ -11,7 +11,7 @@ from app.utils.keyboards import (
     get_subscription_plans_keyboard, get_plan_details_keyboard,
     get_payment_keyboard
 )
-from app.utils.decorators import user_required, error_handler
+from app.utils.decorators import user_required, subscription_required, error_handler, rate_limit
 from app.utils.helpers import format_subscription_info, safe_edit_message
 from app.utils.states import Payment as PaymentState
 from config.settings import settings
@@ -25,8 +25,9 @@ router = Router()
 @router.message(Command("subscription"))
 @router.message(F.text == "💎 Подписка")
 @error_handler
+@rate_limit
 @user_required
-async def subscription_menu(message: types.Message, user):
+async def subscription_button(message: types.Message, user):
     """Меню управления подпиской"""
     async with db_service.async_session() as session:
         subscription_info = await SubscriptionService.get_subscription_info(session, user.id)
@@ -39,6 +40,7 @@ async def subscription_menu(message: types.Message, user):
 
 @router.callback_query(F.data == "subscription_info")
 @error_handler
+@rate_limit
 @user_required
 async def subscription_info_callback(callback: types.CallbackQuery, user):
     """Подробная информация о подписке"""
@@ -61,8 +63,9 @@ async def subscription_info_callback(callback: types.CallbackQuery, user):
 
 @router.callback_query(F.data == "buy_subscription")
 @error_handler
+@rate_limit
 @user_required
-async def buy_subscription_callback(callback: types.CallbackQuery, state: FSMContext, user):
+async def buy_subscription_callback(callback: types.CallbackQuery, user):
     """Покупка подписки"""
     async with db_service.async_session() as session:
         try:
@@ -193,6 +196,7 @@ async def cancel_subscription_cancel(callback: types.CallbackQuery):
 
 @router.callback_query(F.data == "view_plans")
 @error_handler
+@rate_limit
 @user_required
 async def view_plans_callback(callback: types.CallbackQuery, user):
     """Просмотр доступных планов подписки"""

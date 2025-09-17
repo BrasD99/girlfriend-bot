@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 class RedisRateLimiter:
     """
     Redis-based rate limiter для ограничения количества сообщений от пользователей
+    
+    Простая логика:
+    1. Каждый пользователь имеет счетчик сообщений с TTL = 60 секунд
+    2. При превышении лимита пользователь банится на N секунд
+    3. После истечения бана счетчик сбрасывается
     """
     
     def __init__(self, redis_url: str = None):
@@ -16,7 +21,7 @@ class RedisRateLimiter:
         self._redis: Optional[redis.Redis] = None
         
         # Префиксы для ключей Redis
-        self.MESSAGE_KEY_PREFIX = "rate_limit:messages:"
+        self.MESSAGE_COUNT_KEY_PREFIX = "rate_limit:count:"
         self.BAN_KEY_PREFIX = "rate_limit:ban:"
         self.WARNING_KEY_PREFIX = "rate_limit:warning:"
     
@@ -40,7 +45,7 @@ class RedisRateLimiter:
     async def close(self):
         """Закрытие подключения к Redis"""
         if self._redis:
-            await self._redis.close()
+            await self._redis.aclose()
             self._redis = None
     
     def _get_current_timestamp(self) -> int:
@@ -56,20 +61,10 @@ class RedisRateLimiter:
             redis_client = await self._get_redis()
             ban_key = f"{self.BAN_KEY_PREFIX}{user_id}"
             
-            # Проверяем, есть ли бан и не истек ли он
-            ban_until = await redis_client.get(ban_key)
-            if ban_until is None:
-                return False
+            # Проверяем TTL ключа бана
+            ttl = await redis_client.ttl(ban_key)
+            return ttl > 0
             
-            current_time = self._get_current_timestamp()
-            ban_until_timestamp = int(ban_until)
-            
-            if current_time >= ban_until_timestamp:
-                # Бан истек, удаляем ключ
-                await redis_client.delete(ban_key)
-                return False
-            
-            return True
         except Exception as e:
             logger.error(f"Error checking ban status for user {user_id}: {e}")
             return False
@@ -80,18 +75,9 @@ class RedisRateLimiter:
             redis_client = await self._get_redis()
             ban_key = f"{self.BAN_KEY_PREFIX}{user_id}"
             
-            ban_until = await redis_client.get(ban_key)
-            if ban_until is None:
-                return None
+            ttl = await redis_client.ttl(ban_key)
+            return ttl if ttl > 0 else None
             
-            current_time = self._get_current_timestamp()
-            ban_until_timestamp = int(ban_until)
-            
-            if current_time >= ban_until_timestamp:
-                await redis_client.delete(ban_key)
-                return None
-            
-            return ban_until_timestamp - current_time
         except Exception as e:
             logger.error(f"Error getting ban remaining time for user {user_id}: {e}")
             return None
@@ -121,70 +107,62 @@ class RedisRateLimiter:
             }
         
         try:
-            # Проверяем, не забанен ли пользователь
-            if await self.is_user_banned(user_id):
-                ban_remaining = await self.get_ban_remaining_time(user_id)
+            redis_client = await self._get_redis()
+            ban_key = f"{self.BAN_KEY_PREFIX}{user_id}"
+            count_key = f"{self.MESSAGE_COUNT_KEY_PREFIX}{user_id}"
+            warning_key = f"{self.WARNING_KEY_PREFIX}{user_id}"
+            
+            # 1. Проверяем, забанен ли пользователь
+            ban_remaining = await redis_client.ttl(ban_key)
+            if ban_remaining > 0:
                 return {
                     'allowed': False,
                     'remaining': 0,
                     'reset_in': 0,
                     'banned': True,
-                    'ban_remaining': ban_remaining or 0,
+                    'ban_remaining': ban_remaining,
                     'warning': False
                 }
             
-            redis_client = await self._get_redis()
-            message_key = f"{self.MESSAGE_KEY_PREFIX}{user_id}"
-            warning_key = f"{self.WARNING_KEY_PREFIX}{user_id}"
+            # 2. Получаем текущий счетчик сообщений
+            current_count = await redis_client.get(count_key)
+            current_count = int(current_count) if current_count else 0
             
-            current_time = self._get_current_timestamp()
-            window_start = current_time - 60  # Окно в 60 секунд
-            
-            # Удаляем старые записи (старше 1 минуты)
-            await redis_client.zremrangebyscore(message_key, 0, window_start)
-            
-            # Получаем количество сообщений за последнюю минуту
-            current_messages = await redis_client.zcard(message_key)
-            remaining = max(0, settings.rate_limit_messages_per_minute - current_messages)
-            
-            # Вычисляем время до сброса лимита
-            oldest_messages = await redis_client.zrange(message_key, 0, 0, withscores=True)
-            if oldest_messages:
-                oldest_timestamp = int(oldest_messages[0][1])
-                reset_in = max(0, oldest_timestamp + 60 - current_time)
-            else:
-                reset_in = 0
-            
-            # Проверяем, нужно ли показать предупреждение
-            warning = False
-            if (current_messages >= settings.rate_limit_warning_threshold):
-                warning_sent = await redis_client.get(warning_key)
-                if warning_sent is None:
-                    warning = True
-                    # Устанавливаем флаг предупреждения на 60 секунд
-                    await redis_client.setex(warning_key, 60, "1")
-            
-            # Проверяем, превышен ли лимит
-            if current_messages >= settings.rate_limit_messages_per_minute:
-                # Баним пользователя
-                ban_key = f"{self.BAN_KEY_PREFIX}{user_id}"
-                ban_until = current_time + settings.rate_limit_ban_duration_seconds
-                await redis_client.setex(ban_key, settings.rate_limit_ban_duration_seconds, str(ban_until))
+            # 3. Проверяем, превышен ли лимит
+            if current_count >= settings.rate_limit_messages_per_minute:
+                # Создаем бан и сбрасываем счетчик
+                await redis_client.setex(ban_key, settings.rate_limit_ban_duration_seconds, "banned")
+                await redis_client.delete(count_key)  # Сбрасываем счетчик
                 
-                logger.warning(f"User {user_id} rate limited: {current_messages} messages in last minute")
+                logger.warning(f"User {user_id} rate limited: {current_count} messages, banned for {settings.rate_limit_ban_duration_seconds}s")
                 
                 return {
                     'allowed': False,
                     'remaining': 0,
-                    'reset_in': reset_in,
+                    'reset_in': 0,
                     'banned': True,
                     'ban_remaining': settings.rate_limit_ban_duration_seconds,
                     'warning': False
                 }
             
+            # 4. Лимит не превышен - вычисляем оставшиеся сообщения
+            remaining = settings.rate_limit_messages_per_minute - current_count - 1  # -1 для текущего сообщения
+            
+            # 5. Получаем время до сброса счетчика
+            reset_in = await redis_client.ttl(count_key)
+            reset_in = reset_in if reset_in > 0 else 60
+            
+            # 6. Проверяем предупреждение
+            warning = False
+            if current_count >= settings.rate_limit_warning_threshold:
+                warning_exists = await redis_client.exists(warning_key)
+                if not warning_exists:
+                    warning = True
+                    await redis_client.setex(warning_key, 60, "warned")
+            
             return {
                 'allowed': True,
-                'remaining': remaining,
+                'remaining': max(0, remaining),
                 'reset_in': reset_in,
                 'banned': False,
                 'ban_remaining': 0,
@@ -210,15 +188,16 @@ class RedisRateLimiter:
         
         try:
             redis_client = await self._get_redis()
-            message_key = f"{self.MESSAGE_KEY_PREFIX}{user_id}"
+            count_key = f"{self.MESSAGE_COUNT_KEY_PREFIX}{user_id}"
             
-            current_time = self._get_current_timestamp()
+            # Увеличиваем счетчик на 1
+            current_count = await redis_client.incr(count_key)
             
-            # Добавляем текущее сообщение в sorted set с timestamp как score
-            await redis_client.zadd(message_key, {str(current_time): current_time})
+            # Если это первое сообщение, устанавливаем TTL на 60 секунд
+            if current_count == 1:
+                await redis_client.expire(count_key, 60)
             
-            # Устанавливаем TTL для ключа (70 секунд, чтобы быть уверенными)
-            await redis_client.expire(message_key, 70)
+            logger.debug(f"User {user_id} message recorded, count: {current_count}")
             
         except Exception as e:
             logger.error(f"Error recording message for user {user_id}: {e}")
@@ -228,12 +207,12 @@ class RedisRateLimiter:
         try:
             redis_client = await self._get_redis()
             
-            message_key = f"{self.MESSAGE_KEY_PREFIX}{user_id}"
+            count_key = f"{self.MESSAGE_COUNT_KEY_PREFIX}{user_id}"
             ban_key = f"{self.BAN_KEY_PREFIX}{user_id}"
             warning_key = f"{self.WARNING_KEY_PREFIX}{user_id}"
             
             # Удаляем все ключи пользователя
-            await redis_client.delete(message_key, ban_key, warning_key)
+            await redis_client.delete(count_key, ban_key, warning_key)
             
             logger.info(f"Rate limit reset for user {user_id}")
             
@@ -246,12 +225,12 @@ class RedisRateLimiter:
             redis_client = await self._get_redis()
             
             # Получаем все ключи для подсчета статистики
-            message_keys = await redis_client.keys(f"{self.MESSAGE_KEY_PREFIX}*")
+            count_keys = await redis_client.keys(f"{self.MESSAGE_COUNT_KEY_PREFIX}*")
             ban_keys = await redis_client.keys(f"{self.BAN_KEY_PREFIX}*")
             warning_keys = await redis_client.keys(f"{self.WARNING_KEY_PREFIX}*")
             
             return {
-                'active_users': len(message_keys),
+                'active_users': len(count_keys),
                 'banned_users': len(ban_keys),
                 'warnings_sent': len(warning_keys),
                 'settings': {

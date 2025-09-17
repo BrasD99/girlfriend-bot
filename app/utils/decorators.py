@@ -59,10 +59,12 @@ def rate_limit(func):
             user_id = message_or_callback.from_user.id
             chat_id = message_or_callback.chat.id
             bot = message_or_callback.bot
+            is_callback = False
         elif isinstance(message_or_callback, types.CallbackQuery):
             user_id = message_or_callback.from_user.id
             chat_id = message_or_callback.message.chat.id
             bot = message_or_callback.bot
+            is_callback = True
         else:
             logger.error("Unsupported object type in rate_limit decorator")
             return
@@ -74,36 +76,55 @@ def rate_limit(func):
         if limit_result['banned']:
             ban_remaining = limit_result['ban_remaining']
             if ban_remaining > 0:
-                await bot.send_message(
-                    chat_id,
-                    f"🚫 **Слишком много сообщений!**\n\n"
-                    f"Вы временно ограничены в отправке сообщений.\n"
-                    f"⏰ Попробуйте снова через {ban_remaining} сек.",
-                    parse_mode="Markdown"
-                )
+                ban_message = f"🚫 Слишком много действий! Попробуйте через {ban_remaining} сек."
+                
+                if is_callback:
+                    # Для callback_query используем answer с show_alert
+                    await message_or_callback.answer(ban_message, show_alert=True)
+                else:
+                    # Для обычных сообщений отправляем новое сообщение
+                    await bot.send_message(
+                        chat_id,
+                        f"🚫 **Слишком много сообщений!**\n\n"
+                        f"Вы временно ограничены в отправке сообщений.\n"
+                        f"⏰ Попробуйте снова через {ban_remaining} сек.",
+                        parse_mode="Markdown"
+                    )
+            # НЕ записываем сообщение, если пользователь забанен
             return
         
         # Если нужно показать предупреждение
         if limit_result['warning']:
-            await bot.send_message(
-                chat_id,
-                f"⚠️ **Внимание!**\n\n"
-                f"Вы отправляете сообщения слишком быстро.\n"
-                f"Осталось сообщений: {limit_result['remaining']}\n"
-                f"При превышении лимита вы будете временно ограничены.",
-                parse_mode="Markdown"
-            )
+            warning_message = f"⚠️ Внимание! Осталось действий: {limit_result['remaining']}"
+            
+            if is_callback:
+                # Для callback_query используем answer без show_alert
+                await message_or_callback.answer(warning_message, show_alert=False)
+            else:
+                # Для обычных сообщений отправляем новое сообщение
+                await bot.send_message(
+                    chat_id,
+                    f"⚠️ **Внимание!**\n\n"
+                    f"Вы отправляете сообщения слишком быстро.\n"
+                    f"Осталось сообщений: {limit_result['remaining']}\n"
+                    f"При превышении лимита вы будете временно ограничены.",
+                    parse_mode="Markdown"
+                )
         
         # Если лимит не превышен, записываем сообщение и выполняем функцию
         if limit_result['allowed']:
+            # Записываем сообщение ТОЛЬКО если оно разрешено
             await redis_rate_limiter.record_message(user_id)
             return await func(message_or_callback, *args, **kwargs)
         else:
             # Лимит превышен, но пользователь еще не забанен (не должно происходить)
-            await bot.send_message(
-                chat_id,
-                "🚫 Превышен лимит сообщений. Попробуйте позже."
-            )
+            limit_message = "🚫 Превышен лимит сообщений. Попробуйте позже."
+            
+            if is_callback:
+                await message_or_callback.answer(limit_message, show_alert=True)
+            else:
+                await bot.send_message(chat_id, limit_message)
+            # НЕ записываем сообщение, если лимит превышен
             return
     
     return wrapper
